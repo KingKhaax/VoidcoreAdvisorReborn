@@ -1130,7 +1130,7 @@ function BRC.Show()
         local bName = pf.Name:GetText()
         SetItemTitle("ffffffff", bName)
     else
-        SetItemTitle("ff888888", "Nebulous Voidcore Roll")
+        SetItemTitle("ff888888", L["BONUS_ROLL_TITLE"])
     end
 
     local specID = VCA.SpecInfo.GetEffectiveLootSpecID()
@@ -1310,7 +1310,7 @@ function BRC.ShowPreview()
         winItemIcon:Hide()
     end
     local iHex = iQuality and select(4, C_Item.GetItemQualityColor(iQuality)) or "ffa335ee"
-    SetItemTitle(iHex, iName or "Nebulous Voidcore Roll")
+    SetItemTitle(iHex, iName or L["BONUS_ROLL_TITLE"])
 
     local specID = VCA.SpecInfo.GetEffectiveLootSpecID()
     local _, sName, _, sIcon = GetSpecializationInfoByID(specID)

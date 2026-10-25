@@ -930,7 +930,7 @@ function Panel.AuditRaidTooltips()
         end
     end
     local title = VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r "
-    print(title .. string.format("Tooltip check: %d items to look at...", #jobs))
+    print(title .. string.format(L["TOOLTIP_AUDIT_START"], #jobs))
     for _, job in ipairs(jobs) do
         if C_Item and C_Item.RequestLoadItemDataByID then
             C_Item.RequestLoadItemDataByID(job.itemID)
@@ -962,8 +962,7 @@ function Panel.AuditRaidTooltips()
             C_Timer.After(1.5, run)
             return
         end
-        print(title .. string.format("Tooltip check done: %d items fixed with the effect bonus, %d could not be read, %d still lose an effect.",
-            fixed, unknown, #bad))
+        print(title .. string.format(L["TOOLTIP_AUDIT_DONE"], fixed, unknown, #bad))
         for i = 1, math.min(#bad, 25) do
             print("  " .. bad[i])
         end

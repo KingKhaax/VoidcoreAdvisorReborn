@@ -128,26 +128,20 @@ local function RestoreSkippedPools(db, backup, skipped, prefix)
     end
 end
 
-local function ReportScan(label, marked, stats, hint)
-    Log(string.format("%s complete: %d unique item(s) marked as obtained, %d of %d tooltip(s) read.", label, marked,
-        stats.pools - stats.unreadable - stats.mismatch, stats.pools))
+local function ReportScan(doneKey, marked, stats, hintKey)
+    local L = VCA.L
+    Log(string.format(L[doneKey], marked, stats.pools - stats.unreadable - stats.mismatch, stats.pools))
     if stats.unreadable > 0 then
-        Log(string.format(
-            "%d tooltip(s) could not be read in time. Nothing was changed for them. Wait a few seconds and scan again.",
-            stats.unreadable))
+        Log(string.format(L["SCAN_UNREADABLE"], stats.unreadable))
     end
     if stats.mismatch > 0 then
-        Log(string.format(
-            "%d tooltip(s) did not match any item name the addon knows (client language?). Nothing was changed for them.",
-            stats.mismatch))
+        Log(string.format(L["SCAN_MISMATCH"], stats.mismatch))
     end
     if stats.uncached > 0 then
-        Log(string.format(
-            "%d item name(s) were not loaded by the game yet and could not be checked. Open the Encounter Journal, wait a few seconds and scan again.",
-            stats.uncached))
+        Log(string.format(L["SCAN_UNCACHED"], stats.uncached))
     end
     if marked == 0 then
-        Log(hint)
+        Log(L[hintKey])
     end
 end
 
@@ -306,8 +300,7 @@ local function FinalizeScan()
     end
 
     RestoreSkippedPools(db, db.obtainedBackup.mythicPlus, skipped, "MYTHIC_PLUS")
-    ReportScan("Scan", totalMarked, stats,
-        "Nothing was marked. This scan only reads the Mythic+ keystone +10 pool. For raid rolls use the scan button in the raid overview or /void scan raid 14, 15 or 16 (Normal, Heroic, Mythic). Rolls from keystones below +10 are not read.")
+    ReportScan("SCAN_DONE", totalMarked, stats, "SCAN_HINT_DUNGEON")
 
     -- 3. Restore original loot spec.
     _combatFrame:UnregisterEvent("PLAYER_REGEN_DISABLED")
@@ -461,7 +454,7 @@ function Scan.Start()
     end
 
     -- Pre-build name caches per spec (requires item cache to be warm).
-    Log(string.format("Starting scan: %d spec(s), %d dungeon(s)", #specs, #dungeons))
+    Log(string.format(VCA.L["SCAN_STARTING"], #specs, #dungeons))
     local nameCaches = {} -- [specID][instanceID] = { [name]=itemID }
     local missing = {}
     for _, specEntry in ipairs(specs) do
@@ -511,7 +504,7 @@ _combatFrame:SetScript("OnEvent", function(self, event)
         AbortScan("COMBAT")
     elseif event == "PLAYER_LOOT_SPEC_UPDATED" then
         if not _state.expectingSpecChange then
-            Log("Scan aborted: loot spec changed manually during scan.")
+            Log(VCA.L["SCAN_ABORTED_SPEC"])
             AbortScan("ABORTED")
         end
     end
@@ -647,8 +640,7 @@ local function FinalizeRaidScan()
         totalMarked = totalMarked + 1
     end
     RestoreSkippedPools(db, db.obtainedBackup.raid, skipped, "RAID")
-    ReportScan("Raid scan", totalMarked, stats,
-        "Nothing was marked. Scan the difficulty you rolled on: /void scan raid 14 (Normal), 15 (Heroic) or 16 (Mythic). Dungeon rolls are read by the scan in the dungeon overview, and only at keystone +10.")
+    ReportScan("RAID_SCAN_DONE", totalMarked, stats, "SCAN_HINT_RAID")
 
     -- 3. Restore original loot spec.
     _raidCombatFrame:UnregisterEvent("PLAYER_REGEN_DISABLED")
@@ -801,7 +793,7 @@ function Scan.StartRaid(difficultyID)
     end)
 
     -- Pre-build name caches.
-    Log(string.format("Starting raid scan: %d spec(s), %d encounter(s), difficultyID=%d", #specs, #encounters, difficultyID))
+    Log(string.format(VCA.L["RAID_SCAN_STARTING"], #specs, #encounters, difficultyID))
     local nameCaches = {}
     local missing = {}
     for _, specEntry in ipairs(specs) do
@@ -848,7 +840,7 @@ _raidCombatFrame:SetScript("OnEvent", function(self, event)
         AbortRaidScan("COMBAT")
     elseif event == "PLAYER_LOOT_SPEC_UPDATED" then
         if not _raidState.expectingSpecChange then
-            Log("Raid scan aborted: loot spec changed manually during scan.")
+            Log(VCA.L["RAID_SCAN_ABORTED_SPEC"])
             AbortRaidScan("ABORTED")
         end
     end

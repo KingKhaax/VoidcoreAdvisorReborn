@@ -240,7 +240,7 @@ local function TryScan(attempt, verbose)
         return
     end
     if InCombatLockdown() or IsInInstance() then
-        Say(verbose, "Cannot read the Encounter Journal in combat or inside an instance.")
+        Say(verbose, L["LIVE_RAID_NO_ACCESS"])
         C_Timer.After(10, function()
             TryScan(attempt, verbose)
         end)
@@ -256,7 +256,7 @@ local function TryScan(attempt, verbose)
 
     local instanceID = FindRaid(verbose)
     if not instanceID then
-        Say(verbose, "The new raid was not found in the Encounter Journal.")
+        Say(verbose, L["LIVE_RAID_NOT_FOUND"])
         return
     end
     if store[instanceID] and store[instanceID].raids and not verbose then
@@ -269,14 +269,14 @@ local function TryScan(attempt, verbose)
         store[instanceID] = entry
         Inject(entry)
         Refresh()
-        print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. (VCA.L["LIVE_RAID_ADDED"] or "New raid loot loaded from the Encounter Journal."))
+        print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. L["LIVE_RAID_ADDED"])
     elseif attempt < MAX_ATTEMPTS then
-        Say(verbose, "Item data is still loading, retrying...")
+        Say(verbose, L["LIVE_RAID_RETRY"])
         C_Timer.After(4, function()
             TryScan(attempt + 1, verbose)
         end)
     else
-        Say(verbose, "Could not read the raid loot (item data did not load).")
+        Say(verbose, L["LIVE_RAID_FAILED"])
     end
 end
 

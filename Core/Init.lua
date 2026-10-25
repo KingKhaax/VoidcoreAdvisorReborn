@@ -257,12 +257,12 @@ SlashCmdList["VOIDCOREADVISOR"] = function(msg)
         -- Print raw bonus roll event log for manual verification.
         local log = VCA.Data.GetBonusRollLog()
         if #log == 0 then
-            print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r No bonus roll events recorded.")
+            print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. L["ROLLS_NONE"])
         else
-            print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Bonus roll log (" .. #log .. " entries, oldest first):")
+            print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. string.format(L["ROLLS_HEADER"], #log))
             for i, entry in ipairs(log) do
                 local ts = date("%Y-%m-%d %H:%M:%S", entry.timestamp)
-                local src = "unknown source"
+                local src = L["ROLLS_UNKNOWN_SOURCE"]
                 if entry.sourceType and entry.sourceID and entry.difficultyID then
                     src = entry.sourceType .. ":" .. entry.sourceID .. " diff=" .. entry.difficultyID
                     if entry.keyLevel then
@@ -270,7 +270,7 @@ SlashCmdList["VOIDCOREADVISOR"] = function(msg)
                     end
                 end
                 if entry.manual then
-                    src = src .. " [manual]"
+                    src = src .. " " .. L["ROLLS_MANUAL"]
                 end
                 local spec = entry.specID and ("spec=" .. entry.specID) or "spec=?"
                 print(string.format("  [%d] %s  %s  %s  %s", i, ts,

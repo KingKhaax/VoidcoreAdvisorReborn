@@ -579,7 +579,7 @@ function Detection.ReplayBonusRollLog(verbose)
     local log = VCA.Data and VCA.Data.GetBonusRollLog and VCA.Data.GetBonusRollLog()
     if not log or #log == 0 then
         if verbose then
-            print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay: log is empty.")
+            print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_EMPTY"])
         end
         return
     end
@@ -619,14 +619,14 @@ function Detection.ReplayBonusRollLog(verbose)
                     if verbose then
                         local name = C_Item.GetItemNameByID(entry.itemID) or tostring(entry.itemID)
                         print(string.format(
-                            VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay [%d]: marked across all raid encounters — %s (spec=%s)",
+                            VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_RAID_ALL"],
                             i, name, tostring(entry.specID)))
                     end
                 else
                     incomplete = incomplete + 1
                     if verbose then
                         print(string.format(
-                            VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay [%d]: skipped — incomplete entry (itemID=%s specID=%s source=%s:%s diff=%s)",
+                            VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_INCOMPLETE"],
                             i, tostring(entry.itemID), tostring(entry.specID), tostring(entry.sourceType),
                             tostring(entry.sourceID), tostring(entry.difficultyID)))
                     end
@@ -653,14 +653,14 @@ function Detection.ReplayBonusRollLog(verbose)
                         if verbose then
                             local name = C_Item.GetItemNameByID(entry.itemID) or tostring(entry.itemID)
                             print(string.format(
-                                VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay [%d]: re-marked on difficulty %s — %s (spec=%s)",
+                                VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_REMARKED"],
                                 i, tostring(diffID), name, tostring(entry.specID)))
                         end
                     else
                         incomplete = incomplete + 1
                         if verbose then
                             print(string.format(
-                                VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay [%d]: skipped — item no longer in season pool (itemID=%s)",
+                                VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_NOT_IN_POOL"],
                                 i, tostring(entry.itemID)))
                         end
                     end
@@ -682,14 +682,14 @@ function Detection.ReplayBonusRollLog(verbose)
                         if verbose then
                             local name = C_Item.GetItemNameByID(entry.itemID) or tostring(entry.itemID)
                             print(string.format(
-                                VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay [%d]: marked across all sources — %s (spec=%s)",
+                                VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_ALL_SOURCES"],
                                 i, name, tostring(entry.specID)))
                         end
                     else
                         incomplete = incomplete + 1
                         if verbose then
                             print(string.format(
-                                VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay [%d]: skipped — incomplete entry (itemID=%s specID=%s source=%s:%s diff=%s)",
+                                VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_INCOMPLETE"],
                                 i, tostring(entry.itemID), tostring(entry.specID), tostring(entry.sourceType),
                                 tostring(entry.sourceID), tostring(entry.difficultyID)))
                         end
@@ -698,7 +698,7 @@ function Detection.ReplayBonusRollLog(verbose)
                     incomplete = incomplete + 1
                     if verbose then
                         print(string.format(
-                            VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay [%d]: skipped — incomplete entry (itemID=%s specID=%s source=%s:%s diff=%s)",
+                            VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_INCOMPLETE"],
                             i, tostring(entry.itemID), tostring(entry.specID), tostring(entry.sourceType),
                             tostring(entry.sourceID), tostring(entry.difficultyID)))
                     end
@@ -732,7 +732,7 @@ function Detection.ReplayBonusRollLog(verbose)
                         if verbose then
                             local name = C_Item.GetItemNameByID(entry.itemID) or tostring(entry.itemID)
                             print(string.format(
-                                VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay [%d]: upgraded bare → %s tier for %s (spec=%s)",
+                                VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_UPGRADED"],
                                 i, isHighTier and "≥10" or "<10", name, tostring(entry.specID)))
                         end
                     end
@@ -740,7 +740,7 @@ function Detection.ReplayBonusRollLog(verbose)
                 skipped = skipped + 1
                 if verbose then
                     local name = C_Item.GetItemNameByID(entry.itemID) or tostring(entry.itemID)
-                    print(string.format(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay [%d]: already obtained — %s (spec=%s)",
+                    print(string.format(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_ALREADY"],
                         i, name, tostring(entry.specID)))
                 end
             else
@@ -761,7 +761,7 @@ function Detection.ReplayBonusRollLog(verbose)
                 if verbose then
                     local name = C_Item.GetItemNameByID(entry.itemID) or tostring(entry.itemID)
                     print(string.format(
-                        VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay [%d]: %s spec=%s source=%s:%s — classID=%s poolSize=%s inPool=%s",
+                        VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_DETAIL"],
                         i, name, tostring(entry.specID), source.sourceType, tostring(source.sourceID),
                         tostring(classID), cachedPool and tostring(#cachedPool) or "nil", tostring(inPool)))
                 end
@@ -774,7 +774,7 @@ function Detection.ReplayBonusRollLog(verbose)
                             .IsObtained(source.sourceType, source.sourceID, source.difficultyID, entry.specID,
                             entry.itemID) then
                         print(string.format(
-                            VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay [%d]: pool complete — cycle reset for spec %s.", i,
+                            VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_CYCLE_RESET"], i,
                             tostring(entry.specID)))
                     end
                 elseif TryRecoverRaidSource(entry.itemID, source, entry.specID) then
@@ -788,7 +788,7 @@ function Detection.ReplayBonusRollLog(verbose)
     activeItemLevel = nil
     if verbose then
         print(string.format(
-            VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Replay complete: %d marked, %d already obtained, %d not in pool, %d incomplete.",
+            VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["REPLAY_DONE"],
             marked, skipped, nomatch, incomplete))
     end
 end
@@ -892,7 +892,7 @@ local function CacheActiveKeystoneRun()
             status = "running"
         })
     end
-    print(string.format(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Key detected - %s +%d.", instanceName or "Unknown", level))
+    print(string.format(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["KEY_DETECTED"], instanceName or VCA.L["UNKNOWN"], level))
 end
 
 function handlers.CHALLENGE_MODE_START()
@@ -937,8 +937,8 @@ function handlers.PLAYER_ENTERING_WORLD()
                                              VCA.LootPool.GetSeasonRaidByName(instanceName2))
                 if ejInstanceID then
                     PersistRaidContext(ejInstanceID, difficultyID)
-                    print(string.format(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Raid detected - %s (%s).",
-                        instanceName2 or "Unknown", difficultyName or tostring(difficultyID)))
+                    print(string.format(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["RAID_DETECTED"],
+                        instanceName2 or VCA.L["UNKNOWN"], difficultyName or tostring(difficultyID)))
                 else
                     ClearPersistedRaidContext()
                 end

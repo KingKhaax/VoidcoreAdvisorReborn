@@ -242,7 +242,7 @@ function LootPool.WarmCache()
                     end
 
                     if allCached then
-                        print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r Finished loading.")
+                        print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["WARM_FINISHED"])
                         Finish(true)
                     elseif warmRetries < MAX_RETRIES then
                         warmRetries = warmRetries + 1

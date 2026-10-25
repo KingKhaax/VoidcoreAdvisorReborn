@@ -1,3 +1,12 @@
+Version: 2.8.2
+2026/10/25 Released
+
+🛠️ Fix
+- [Languages] Messages that were written only in English now follow the language of your game, in all 11 languages: the report of the Voidcache scan with its hints, start and cancel messages, "Key detected" and "Raid detected", the warning when the loot data is missing, "Finished loading", the messages of /void liveraid, /void replaylog, /void rolls and /void tooltips, the title of the bonus roll window when the item is not known yet and the "Warming cache" line of the raid overview. The /void debug report stays in English on purpose, so it can be read when it is pasted in a bug report.
+- [Scan] The confirmation of the raid scan always said "Mythic" in ten languages, even when you were scanning Normal or Heroic. It now shows the difficulty you are scanning. Two typos fixed in the scan confirmations (German and Spanish).
+
+---
+
 Version: 2.8.1
 2026/10/25 Released
 

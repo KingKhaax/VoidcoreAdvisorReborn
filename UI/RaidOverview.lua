@@ -180,9 +180,9 @@ local function SetLoadingState(isLoading, pausedByEJ)
     end
 
     if pausedByEJ then
-        loadingBaseText = L["RAID_OVERVIEW_LOADING_PAUSED"] or "Warming cache (paused while EJ is open)"
+        loadingBaseText = L["RAID_OVERVIEW_LOADING_PAUSED"]
     else
-        loadingBaseText = L["RAID_OVERVIEW_LOADING"] or "Warming cache"
+        loadingBaseText = L["RAID_OVERVIEW_LOADING"]
     end
 
     if not loadingText:IsShown() then

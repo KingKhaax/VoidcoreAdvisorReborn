@@ -277,8 +277,7 @@ local function WarnMissingSeasonData()
         return
     end
     _warnedMissingSeasonData = true
-    print("|cff66ccffVoidcoreAdvisor Reborn:|r |cffff4444Loot data is missing.|r  " ..
-              "Please update the addon to the latest version.")
+    print("|cff66ccffVoidcoreAdvisor Reborn:|r |cffff4444" .. VCA.L["LOOT_DATA_MISSING"] .. "|r")
 end
 
 -- ── Static loot reads ─────────────────────────────────────────────────────────
