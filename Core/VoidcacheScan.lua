@@ -101,11 +101,61 @@ local function ParseVoidcacheTooltip(tooltipData, numLines)
     return items
 end
 
+local function PoolStatus(parsed, nameCache)
+    if parsed == nil then
+        return "UNREADABLE"
+    end
+    if next(nameCache) == nil or next(parsed) == nil then
+        return "OK"
+    end
+    for name in pairs(nameCache) do
+        if parsed[name] then
+            return "OK"
+        end
+    end
+    return "MISMATCH"
+end
+
+local function RestoreSkippedPools(db, backup, skipped, prefix)
+    if next(skipped) == nil then
+        return
+    end
+    for key, val in pairs(backup) do
+        local sourceID, specID = key:match("^" .. prefix .. ":(%d+):%d+:(%d+):")
+        if sourceID and skipped[tonumber(specID) .. ":" .. tonumber(sourceID)] then
+            db.obtained[key] = val
+        end
+    end
+end
+
+local function ReportScan(label, marked, stats, hint)
+    Log(string.format("%s complete: %d unique item(s) marked as obtained, %d of %d tooltip(s) read.", label, marked,
+        stats.pools - stats.unreadable - stats.mismatch, stats.pools))
+    if stats.unreadable > 0 then
+        Log(string.format(
+            "%d tooltip(s) could not be read in time. Nothing was changed for them. Wait a few seconds and scan again.",
+            stats.unreadable))
+    end
+    if stats.mismatch > 0 then
+        Log(string.format(
+            "%d tooltip(s) did not match any item name the addon knows (client language?). Nothing was changed for them.",
+            stats.mismatch))
+    end
+    if stats.uncached > 0 then
+        Log(string.format(
+            "%d item name(s) were not loaded by the game yet and could not be checked. Open the Encounter Journal, wait a few seconds and scan again.",
+            stats.uncached))
+    end
+    if marked == 0 then
+        Log(hint)
+    end
+end
+
 -- ── Name cache ────────────────────────────────────────────────────────────────
 
 -- Returns { [localizedName] = itemID } for every item a specific spec can get
 -- from the dungeon's Voidcache.  Relies on the item cache being warm.
-local function BuildDungeonNameCache(instanceID, specID)
+local function BuildDungeonNameCache(instanceID, specID, missingSet)
     local dungeonData = VCA.SeasonData and VCA.SeasonData.dungeons[instanceID]
     if not dungeonData then
         return {}
@@ -119,6 +169,7 @@ local function BuildDungeonNameCache(instanceID, specID)
             nameCache[name] = itemID
         else
             missing = missing + 1
+            missingSet[itemID] = true
         end
     end
     return nameCache
@@ -196,11 +247,21 @@ local function FinalizeScan()
         end
     end
 
-    -- Clear all existing MYTHIC_PLUS obtained entries — the scan result is now authoritative.
     for key in pairs(db.obtained) do
         if key:sub(1, 12) == "MYTHIC_PLUS:" then
             db.obtained[key] = nil
         end
+    end
+
+    local skipped = {}
+    local stats = {
+        pools = 0,
+        unreadable = 0,
+        mismatch = 0,
+        uncached = 0
+    }
+    for _ in pairs(_state.missing) do
+        stats.uncached = stats.uncached + 1
     end
 
     -- 2. Apply scan results for every season dungeon.
@@ -216,13 +277,23 @@ local function FinalizeScan()
 
         for _, instanceID in ipairs(instanceIDs) do
             local nameCache = specCaches[instanceID] or {}
-            local specItems = specResults[instanceID] or {}
+            local specItems = specResults[instanceID]
+            local status = PoolStatus(specItems, nameCache)
+            stats.pools = stats.pools + 1
 
-            for itemName, itemID in pairs(nameCache) do
-                if not specItems[itemName] then
-                    -- Item is in this spec's pool but was NOT seen in the scan.
-                    markedItemIDs[itemID] = true
-                    VCA.Data.SetObtained(contentType, instanceID, diffID, specID, itemID, true)
+            if status == "OK" then
+                for itemName, itemID in pairs(nameCache) do
+                    if not specItems[itemName] then
+                        markedItemIDs[itemID] = true
+                        VCA.Data.SetObtained(contentType, instanceID, diffID, specID, itemID, true)
+                    end
+                end
+            else
+                skipped[specID .. ":" .. instanceID] = true
+                if status == "UNREADABLE" then
+                    stats.unreadable = stats.unreadable + 1
+                else
+                    stats.mismatch = stats.mismatch + 1
                 end
             end
 
@@ -234,7 +305,9 @@ local function FinalizeScan()
         totalMarked = totalMarked + 1
     end
 
-    Log(string.format("Scan complete — %d unique item(s) marked as obtained.", totalMarked))
+    RestoreSkippedPools(db, db.obtainedBackup.mythicPlus, skipped, "MYTHIC_PLUS")
+    ReportScan("Scan", totalMarked, stats,
+        "Nothing was marked. This scan only reads the Mythic+ keystone +10 pool. For raid rolls use the scan button in the raid overview or /void scan raid 14, 15 or 16 (Normal, Heroic, Mythic). Rolls from keystones below +10 are not read.")
 
     -- 3. Restore original loot spec.
     _combatFrame:UnregisterEvent("PLAYER_REGEN_DISABLED")
@@ -296,8 +369,7 @@ ScanStep = function()
             C_Timer.After(RETRY_DELAY, ScanStep)
             return
         end
-        -- Gave up after MAX_RETRIES — treat as empty result.
-        parsed = {}
+        parsed = nil
     else
         -- Phase 2: tooltip has MIN_LINES+ lines — keep reading until two
         -- consecutive reads return the same line count (tooltip is stable).
@@ -323,7 +395,6 @@ ScanStep = function()
         -- else: line count matches previous read — tooltip is stable, proceed.
     end
 
-    -- Store result.
     _state.results[specEntry.specID] = _state.results[specEntry.specID] or {}
     _state.results[specEntry.specID][dungeonEntry.instanceID] = parsed
     _state.retries = 0
@@ -392,11 +463,12 @@ function Scan.Start()
     -- Pre-build name caches per spec (requires item cache to be warm).
     Log(string.format("Starting scan: %d spec(s), %d dungeon(s)", #specs, #dungeons))
     local nameCaches = {} -- [specID][instanceID] = { [name]=itemID }
+    local missing = {}
     for _, specEntry in ipairs(specs) do
         nameCaches[specEntry.specID] = {}
         for _, dungeonEntry in ipairs(dungeons) do
             nameCaches[specEntry.specID][dungeonEntry.instanceID] =
-                BuildDungeonNameCache(dungeonEntry.instanceID, specEntry.specID)
+                BuildDungeonNameCache(dungeonEntry.instanceID, specEntry.specID, missing)
         end
     end
 
@@ -414,6 +486,7 @@ function Scan.Start()
         expectingSpecChange = false,
         results = {},
         nameCaches = nameCaches,
+        missing = missing,
         originalLootSpec = GetLootSpecialization()
     }
 
@@ -450,7 +523,7 @@ end)
 
 -- ── Raid name cache ───────────────────────────────────────────────────────────
 
-local function BuildEncounterNameCache(encounterID, specID, diffID)
+local function BuildEncounterNameCache(encounterID, specID, diffID, missingSet)
     local raidData = VCA.SeasonData and VCA.SeasonData.raids[encounterID]
     if not raidData then
         return {}
@@ -461,6 +534,8 @@ local function BuildEncounterNameCache(encounterID, specID, diffID)
         local name = C_Item.GetItemInfo(itemID)
         if name and name ~= "" then
             nameCache[name] = itemID
+        else
+            missingSet[itemID] = true
         end
     end
     return nameCache
@@ -518,7 +593,6 @@ local function FinalizeRaidScan()
         end
     end
 
-    -- Clear all existing obtained entries for this raid difficulty — scan result is authoritative.
     for key in pairs(db.obtained) do
         -- Keys are formatted as "RAID:encounterID:diffID:specID:itemID"
         if key:sub(1, 5) == "RAID:" then
@@ -529,7 +603,17 @@ local function FinalizeRaidScan()
         end
     end
 
-    -- 2. Apply results per-spec.
+    local skipped = {}
+    local stats = {
+        pools = 0,
+        unreadable = 0,
+        mismatch = 0,
+        uncached = 0
+    }
+    for _ in pairs(_raidState.missing) do
+        stats.uncached = stats.uncached + 1
+    end
+
     local markedItemIDs = {}
     for _, specEntry in ipairs(specs) do
         local specID = specEntry.specID
@@ -537,11 +621,22 @@ local function FinalizeRaidScan()
         local specCaches = nameCaches[specID] or {}
 
         for encounterID, nameCache in pairs(specCaches) do
-            local seenItems = specResults[encounterID] or {}
-            for itemName, itemID in pairs(nameCache) do
-                if not seenItems[itemName] then
-                    markedItemIDs[itemID] = true
-                    VCA.Data.SetObtained(contentType, encounterID, diffID, specID, itemID, true)
+            local seenItems = specResults[encounterID]
+            local status = PoolStatus(seenItems, nameCache)
+            stats.pools = stats.pools + 1
+            if status == "OK" then
+                for itemName, itemID in pairs(nameCache) do
+                    if not seenItems[itemName] then
+                        markedItemIDs[itemID] = true
+                        VCA.Data.SetObtained(contentType, encounterID, diffID, specID, itemID, true)
+                    end
+                end
+            else
+                skipped[specID .. ":" .. encounterID] = true
+                if status == "UNREADABLE" then
+                    stats.unreadable = stats.unreadable + 1
+                else
+                    stats.mismatch = stats.mismatch + 1
                 end
             end
         end
@@ -551,7 +646,9 @@ local function FinalizeRaidScan()
     for _ in pairs(markedItemIDs) do
         totalMarked = totalMarked + 1
     end
-    Log(string.format("Raid scan complete — %d unique item(s) marked as obtained.", totalMarked))
+    RestoreSkippedPools(db, db.obtainedBackup.raid, skipped, "RAID")
+    ReportScan("Raid scan", totalMarked, stats,
+        "Nothing was marked. Scan the difficulty you rolled on: /void scan raid 14 (Normal), 15 (Heroic) or 16 (Mythic). Dungeon rolls are read by the scan in the dungeon overview, and only at keystone +10.")
 
     -- 3. Restore original loot spec.
     _raidCombatFrame:UnregisterEvent("PLAYER_REGEN_DISABLED")
@@ -608,8 +705,7 @@ RaidScanStep = function()
             C_Timer.After(RETRY_DELAY, RaidScanStep)
             return
         end
-        -- Gave up after MAX_RETRIES — treat as empty result.
-        parsed = {}
+        parsed = nil
     else
         -- Phase 2: tooltip has MIN_LINES+ lines — keep reading until two
         -- consecutive reads return the same line count (tooltip is stable).
@@ -707,10 +803,12 @@ function Scan.StartRaid(difficultyID)
     -- Pre-build name caches.
     Log(string.format("Starting raid scan: %d spec(s), %d encounter(s), difficultyID=%d", #specs, #encounters, difficultyID))
     local nameCaches = {}
+    local missing = {}
     for _, specEntry in ipairs(specs) do
         nameCaches[specEntry.specID] = {}
         for _, enc in ipairs(encounters) do
-            nameCaches[specEntry.specID][enc.encounterID] = BuildEncounterNameCache(enc.encounterID, specEntry.specID, difficultyID)
+            nameCaches[specEntry.specID][enc.encounterID] =
+                BuildEncounterNameCache(enc.encounterID, specEntry.specID, difficultyID, missing)
         end
     end
 
@@ -728,6 +826,7 @@ function Scan.StartRaid(difficultyID)
         expectingSpecChange = false,
         results = {},
         nameCaches = nameCaches,
+        missing = missing,
         originalLootSpec = GetLootSpecialization()
     }
 

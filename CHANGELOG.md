@@ -1,3 +1,12 @@
+Version: 2.8.1
+2026/10/25 Released
+
+🛠️ Fix
+- [Scan] The scan of the Voidcache now reports what it did when it finishes: how many tooltips it read, how many could not be read in time or did not match any item name, how many item names the game had not loaded yet, and what to try when nothing was marked (the dungeon scan only reads keystone +10, raid rolls need the raid scan of the difficulty you rolled on). Reported on CurseForge by a user whose scans found none of their rolled items.
+- [Scan] A tooltip that could not be read in time used to count as empty, so the scan marked every item of that dungeon or boss as obtained and cleared what you had marked there. Now such a pool is skipped, the marks you already had in it are kept, and the scan tells you how many were skipped.
+
+---
+
 Version: 2.8.0
 2026/10/24 Released
 
