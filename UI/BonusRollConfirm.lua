@@ -276,8 +276,22 @@ local function SetItemTitle(hex, fullName)
     local name, sub = fullName:match("^([^:]+):%s*(.+)$")
     name = (name or fullName):gsub("%s+$", "")
     winItemName:SetText("|c" .. hex .. name .. "|r")
-    sub = sourceSub or sub
-    winItemSub:SetText(sub and ("|cffcdbfe0" .. sub .. "|r") or "")
+    if sourceSub then
+        winItemSub:SetText(sourceSub)
+    else
+        winItemSub:SetText(sub and ("|cffcdbfe0" .. sub .. "|r") or "")
+    end
+end
+
+-- Colors of the second line, the ones of the log parses so the value of a roll reads at a glance:
+-- a Mythic+ key goes from grey (+2) to the color of a perfect parse (+10 and above), and a raid
+-- difficulty is green (Normal), purple (Heroic) or gold (Mythic).
+local KEY_COLORS = {"9d9d9d", "1eff00", "1eff00", "0070ff", "0070ff", "a335ee", "ff8000", "e268a8", "e5cc80"}
+local RAID_DIFF_COLORS = {[14] = "1eff00", [15] = "a335ee", [16] = "e5cc80"}
+
+local function KeyLevelColor(level)
+    local i = math.min(#KEY_COLORS, math.max(1, (tonumber(level) or 2) - 1))
+    return "|cff" .. KEY_COLORS[i]
 end
 
 -- Raid: "Boss name (Difficulty)".  Mythic+: "Mythic +10".
@@ -294,10 +308,11 @@ local function SourceSubtitle(source)
         if type(diff) ~= "string" or diff == "" then
             diff = nil
         end
+        local diffColor = "|cff" .. (RAID_DIFF_COLORS[source.difficultyID] or "cdbfe0")
         if boss and diff then
-            return boss .. " (" .. diff .. ")"
+            return "|cffcdbfe0" .. boss .. "|r " .. diffColor .. "(" .. diff .. ")|r"
         end
-        return boss or diff
+        return boss and ("|cffcdbfe0" .. boss .. "|r") or (diff and (diffColor .. diff .. "|r")) or nil
     elseif source.sourceType == VCA.ContentType.MYTHIC_PLUS then
         local label = (L["DIFFICULTY_MYTHIC_PLUS"] or "Mythic+"):gsub("%s*%+$", "")
         local level = source.keyLevel
@@ -305,7 +320,10 @@ local function SourceSubtitle(source)
             local active = VCA.Detection.GetActiveSource()
             level = active and active.sourceType == VCA.ContentType.MYTHIC_PLUS and active.keyLevel or nil
         end
-        return level and (label .. " +" .. level) or label
+        if level then
+            return KeyLevelColor(level) .. label .. " +" .. level .. "|r"
+        end
+        return "|cffcdbfe0" .. label .. "|r"
     end
     return nil
 end
@@ -314,7 +332,7 @@ local function ApplySourceSub(source)
     local text = SourceSubtitle(source)
     sourceSub = text
     if text then
-        winItemSub:SetText("|cffcdbfe0" .. text .. "|r")
+        winItemSub:SetText(text)
     end
 end
 
