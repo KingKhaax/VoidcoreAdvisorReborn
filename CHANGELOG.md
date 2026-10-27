@@ -1,3 +1,11 @@
+Version: 2.8.3
+2026/10/27 Released
+
+🛠️ Fix
+- [Fonts] The text of the addon no longer grows when another addon makes all the game fonts bigger. The addon fonts used to copy the size of the game fonts, so with such an addon the windows (for example the bonus roll window) showed text that was too large and covered other lines. They now keep their own fixed sizes, the addon puts them back if another addon changes them, and checks them again when you enter the world.
+
+---
+
 Version: 2.8.2
 2026/10/25 Released
 

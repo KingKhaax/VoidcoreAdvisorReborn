@@ -3,7 +3,7 @@
 local addonName, VCA = ...
 
 VCA.ADDON_NAME = addonName
-VCA.VERSION = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("VoidcoreAdvisorReborn", "Version")) or "2.8.2"
+VCA.VERSION = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("VoidcoreAdvisorReborn", "Version")) or "2.8.3"
 VCA.SCHEMA_VERSION = 2
 VCA.CHAR_DB_NAME = "VoidcoreAdvisorCharDB"
 VCA.GLOBAL_DB_NAME = "VoidcoreAdvisorDB"

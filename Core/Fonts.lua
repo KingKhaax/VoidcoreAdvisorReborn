@@ -12,15 +12,18 @@ local MEDIA = "Interface\\AddOns\\" .. addonName .. "\\Fonts\\"
 
 -- The font objects the addon uses, the game font object each one copies, and whether it is a
 -- "heading" (gold labels and titles take the semibold weight when the font has one).
+-- The fourth value is the size of the addon text.  It is fixed here instead of being copied from the
+-- game font, so an addon that makes all the game fonts bigger cannot stretch the text of this one
+-- (the windows are laid out for these sizes).
 local OBJECTS = {
-    {"VCAFontNormal", "GameFontNormal", true},
-    {"VCAFontNormalLarge", "GameFontNormalLarge", true},
-    {"VCAFontNormalSmall", "GameFontNormalSmall", true},
-    {"VCAFontNormalHuge", "GameFontNormalHuge", true},
-    {"VCAFontHighlight", "GameFontHighlight", false},
-    {"VCAFontHighlightSmall", "GameFontHighlightSmall", false},
-    {"VCAFontHighlightLarge", "GameFontHighlightLarge", false},
-    {"VCAFontDisableSmall", "GameFontDisableSmall", false}
+    {"VCAFontNormal", "GameFontNormal", true, 12},
+    {"VCAFontNormalLarge", "GameFontNormalLarge", true, 16},
+    {"VCAFontNormalSmall", "GameFontNormalSmall", true, 10},
+    {"VCAFontNormalHuge", "GameFontNormalHuge", true, 20},
+    {"VCAFontHighlight", "GameFontHighlight", false, 12},
+    {"VCAFontHighlightSmall", "GameFontHighlightSmall", false, 10},
+    {"VCAFontHighlightLarge", "GameFontHighlightLarge", false, 16},
+    {"VCAFontDisableSmall", "GameFontDisableSmall", false, 10}
 }
 
 local DEFAULT = "default"
@@ -35,12 +38,46 @@ local BUILTIN = {
 }
 
 local objects = {}
+local enforcing = false
+
+-- Puts the fixed size back on one object if something else changed it.
+local function EnforceSize(o)
+    if enforcing or not (o.obj and o.obj.GetFont) then
+        return
+    end
+    local path, size, flags = o.obj:GetFont()
+    if path and size and math.abs(size - o.size) > 0.01 then
+        enforcing = true
+        pcall(o.obj.SetFont, o.obj, path, o.size, flags or "")
+        enforcing = false
+    end
+end
+
 for _, def in ipairs(OBJECTS) do
     local obj = CreateFont(def[1])
     if _G[def[2]] then
         obj:CopyFontObject(_G[def[2]])
     end
-    objects[#objects + 1] = {obj = obj, base = def[2], heading = def[3]}
+    local o = {obj = obj, base = def[2], heading = def[3], size = def[4]}
+    objects[#objects + 1] = o
+    EnforceSize(o)
+    -- If another addon later sets the font of this object, the size goes back to ours.
+    if hooksecurefunc then
+        pcall(hooksecurefunc, obj, "SetFont", function()
+            EnforceSize(o)
+        end)
+        pcall(hooksecurefunc, obj, "CopyFontObject", function()
+            EnforceSize(o)
+        end)
+    end
+end
+
+-- Sets the size of every addon font again (used when the world loads and a little later, in
+-- case a font addon rewrites all the fonts after the addon loaded).
+function Fonts.EnforceSizes()
+    for _, o in ipairs(objects) do
+        EnforceSize(o)
+    end
 end
 
 local function LSM()
@@ -113,18 +150,20 @@ function Fonts.Apply(name)
         if not regular then
             if base then
                 o.obj:CopyFontObject(base)
+                EnforceSize(o)
             end
         else
-            local _, size, flags
+            local _, _, flags
             if base and base.GetFont then
-                _, size, flags = base:GetFont()
+                _, _, flags = base:GetFont()
             end
             local path = (o.heading and bold) or regular
-            local ok = pcall(o.obj.SetFont, o.obj, path, size or 12, flags or "")
+            local ok = pcall(o.obj.SetFont, o.obj, path, o.size, flags or "")
             if ok then
                 applied = true
             elseif base then
                 o.obj:CopyFontObject(base)
+                EnforceSize(o)
             end
         end
     end
@@ -149,8 +188,16 @@ end
 -- and again when the chosen font gets registered late.
 local loader = CreateFrame("Frame")
 loader:RegisterEvent("PLAYER_LOGIN")
-loader:SetScript("OnEvent", function()
+loader:RegisterEvent("PLAYER_ENTERING_WORLD")
+loader:SetScript("OnEvent", function(_, event)
+    if event == "PLAYER_ENTERING_WORLD" then
+        Fonts.EnforceSizes()
+        C_Timer.After(2, Fonts.EnforceSizes)
+        return
+    end
     Fonts.Apply(Fonts.Current())
+    Fonts.EnforceSizes()
+    C_Timer.After(2, Fonts.EnforceSizes)
     local lsm = LSM()
     if lsm and lsm.RegisterCallback then
         local owner = {}
