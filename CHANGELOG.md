@@ -2,6 +2,7 @@ Version: 2.9.0
 2026/10/27 Released
 
 🔮 New
+- [Panel] The panel now sticks to the Adventure Guide by default, aligned with it and following it when you move the guide. A new pin button next to the X switches between pinned and free: while it is pinned the panel stays attached; if you drag the panel (or press the pin) it is released and keeps the position and size you give it, and pressing the pin again sticks it back. /void resetpanel pins it again. The button has a tooltip that says what it does.
 - [Settings] A new "Text size" control in the General tab: the - and + buttons make the text of the addon and all its windows smaller or bigger (80% to 160%, in steps of 10%) and a Reset button goes back to 100%. The choice is saved. Windows that are already open need to be opened again to show the new size completely.
 - [Panel] The "Mark rolled item" button is orange instead of red while mark mode is on ("Click to save"), with a lighter orange on hover, so it no longer looks like a warning.
 - [Scan] The Voidcache scan of dungeons and of raids now writes its progress in the chat: a line each time it passes 10%, with the steps done, for example "Scanning… 30% (7/24)", up to 100% before the final summary.

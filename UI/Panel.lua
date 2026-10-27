@@ -113,13 +113,20 @@ local function SavePlacement()
     end
 end
 
+-- Pinned (the default): the panel sticks to the right edge of the Adventure Guide and follows it.
+-- Free: it keeps the position and size you gave it (the pin button next to the X switches).
+function Panel.IsPinned()
+    local gdb = _G[VCA.GLOBAL_DB_NAME]
+    return not (gdb and gdb.panelFree)
+end
+
 function Panel.AnchorToEJ()
     local ej = EncounterJournal
     if not ej then
         return
     end
     local placement = GetPlacement()
-    if placement then
+    if not Panel.IsPinned() and placement then
         ApplyPlacement(placement)
         return
     end
@@ -143,6 +150,25 @@ closeBtn:SetScript("OnClick", function()
     Panel.SetMinimized(true)
     frame:Hide()
 end)
+
+-- Pin button, just left of the X: pinned = stuck to the Adventure Guide, unpinned = free to move.
+local pinBtn = CreateFrame("Button", nil, frame)
+pinBtn:SetSize(22, 22)
+pinBtn:SetPoint("RIGHT", closeBtn, "LEFT", 4, 0)
+pinBtn:SetNormalTexture("Interface\\Buttons\\LockButton-Locked-Up")
+pinBtn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+pinBtn:SetScript("OnClick", function()
+    Panel.SetPinned(not Panel.IsPinned())
+end)
+pinBtn:SetScript("OnEnter", function(self)
+    GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
+    GameTooltip:SetText(Panel.IsPinned() and L["PANEL_PINNED_TIP"] or L["PANEL_UNPINNED_TIP"], 1, 1, 1, 1, true)
+    GameTooltip:Show()
+end)
+pinBtn:SetScript("OnLeave", function()
+    GameTooltip:Hide()
+end)
+Panel.pinBtn = pinBtn
 
 -- Persist item selections when the panel hides (close, navigate away, logout).
 frame:SetScript("OnHide", function()
@@ -1594,6 +1620,10 @@ dragHandle:SetHeight(HEADER_H)
 dragHandle:EnableMouse(true)
 dragHandle:RegisterForDrag("LeftButton")
 dragHandle:SetScript("OnDragStart", function()
+    -- Dragging a pinned panel lets it go.
+    if Panel.IsPinned() then
+        Panel.SetPinned(false)
+    end
     Freeze()
     frame:StartMoving()
 end)
@@ -1610,6 +1640,9 @@ grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
 grip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
 grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
 grip:SetScript("OnMouseDown", function()
+    if Panel.IsPinned() then
+        return
+    end
     if Freeze() then
         frame:StartSizing("BOTTOMRIGHT")
     end
@@ -1627,15 +1660,44 @@ frame:SetScript("OnSizeChanged", function()
     end
 end)
 
-function Panel.ResetPlacement()
+-- Pins the panel to the Adventure Guide (true) or frees it where it is (false).
+function Panel.SetPinned(pinned)
     local gdb = _G[VCA.GLOBAL_DB_NAME]
-    if gdb then
-        gdb.panelPlacement = nil
+    if not gdb then
+        return
     end
-    Panel.AnchorToEJ()
-    DoLayout()
-    Panel.Refresh()
+    if pinned then
+        gdb.panelFree = nil
+        gdb.panelPlacement = nil
+        Panel.AnchorToEJ()
+    else
+        gdb.panelFree = true
+        if Freeze() then
+            SavePlacement()
+        end
+    end
+    Panel.UpdatePinButton()
+    if frame:IsShown() then
+        DoLayout()
+        Panel.Refresh()
+    end
 end
+
+-- Pin icon (locked / unlocked) and the resize grip, which only a free panel has.
+function Panel.UpdatePinButton()
+    local pinned = Panel.IsPinned()
+    pinBtn:SetNormalTexture(pinned and "Interface\\Buttons\\LockButton-Locked-Up" or
+                                "Interface\\Buttons\\LockButton-Unlocked-Up")
+    grip:SetShown(not pinned)
+end
+
+function Panel.ResetPlacement()
+    Panel.SetPinned(true)
+end
+
+frame:HookScript("OnShow", function()
+    Panel.UpdatePinButton()
+end)
 
 -- ── Context update ────────────────────────────────────────────────────────────
 
