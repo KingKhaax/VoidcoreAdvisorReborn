@@ -286,7 +286,7 @@ end
 -- Colors of the second line, the ones of the log parses so the value of a roll reads at a glance:
 -- a Mythic+ key goes from grey (+2) to the color of a perfect parse (+10 and above), and a raid
 -- difficulty is green (Normal), purple (Heroic) or gold (Mythic).
-local KEY_COLORS = {"9d9d9d", "1eff00", "1eff00", "0070ff", "0070ff", "a335ee", "ff8000", "e268a8", "e5cc80"}
+local KEY_COLORS = {"9d9d9d", "1eff00", "1eff00", "0070ff", "0070ff", "a335ee", "a335ee", "a335ee", "e5cc80"}
 local RAID_DIFF_COLORS = {[14] = "1eff00", [15] = "a335ee", [16] = "e5cc80"}
 
 local function KeyLevelColor(level)

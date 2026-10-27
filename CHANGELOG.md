@@ -7,7 +7,7 @@ Version: 2.9.0
 - [Panel] The "Mark rolled item" button is orange instead of red while mark mode is on ("Click to save"), with a lighter orange on hover, so it no longer looks like a warning.
 - [Scan] The Voidcache scan of dungeons and of raids now writes its progress in the chat: a line each time it passes 10%, with the steps done, for example "Scanning… 30% (7/24)", up to 100% before the final summary.
 
-- [Roll window] The line that says where the roll comes from is now colored like the log parses: a Mythic+ key goes from grey at +2, through green, blue, purple, orange and pink, to gold (the color of a perfect parse) at +10 and above; and for a raid the difficulty in brackets is green on Normal, purple on Heroic and gold on Mythic, so you can see at a glance where a Voidcore is worth spending.
+- [Roll window] The line that says where the roll comes from is now colored like the log parses: a Mythic+ key is grey at +2, green at +3 and +4, blue at +5 and +6, purple from +7 to +9 and gold (the color of a perfect parse) at +10 and above; and for a raid the difficulty in brackets is green on Normal, purple on Heroic and gold on Mythic, so you can see at a glance where a Voidcore is worth spending.
 
 🛠️ Fix
 - [Roll window] The name and the number of items of each specialization chip now belong to the chip, so they are hidden and shown together with it instead of staying on screen when the chip is hidden.
