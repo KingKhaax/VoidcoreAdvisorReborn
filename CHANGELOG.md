@@ -8,6 +8,7 @@ Version: 2.9.0
 - [Scan] The Voidcache scan of dungeons and of raids now writes its progress in the chat: a line each time it passes 10%, with the steps done, for example "Scanning… 30% (7/24)", up to 100% before the final summary.
 
 🛠️ Fix
+- [Roll window] The name and the number of items of each specialization chip now belong to the chip, so they are hidden and shown together with it instead of staying on screen when the chip is hidden.
 - [Fonts] The text of the addon no longer grows when another addon makes all the game fonts bigger. The addon fonts used to copy the size of the game fonts, so with such an addon the windows (for example the bonus roll window) showed text that was too large and covered other lines. They now keep their own fixed sizes, the addon puts them back if another addon changes them, and checks them again when you enter the world.
 
 ---
