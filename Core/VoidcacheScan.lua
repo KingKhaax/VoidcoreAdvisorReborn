@@ -57,6 +57,19 @@ function Scan.SetRaidProgressCallback(fn)
     _raidProgressCallback = fn
 end
 
+-- Chat progress: one line each time the scan passes a multiple of 10 %, with the steps done.
+-- state.lastMark remembers the last percentage written.
+local function LogStepProgress(state, done, total)
+    if not (state and total and total > 0) then
+        return
+    end
+    local mark = math.floor(done / total * 10) * 10
+    if mark > (state.lastMark or 0) then
+        state.lastMark = mark
+        Log(string.format(VCA.L["SCAN_PROGRESS_PCT"], mark, done, total))
+    end
+end
+
 local function NotifyProgress(specIdx, specCount, dungeonIdx, dungeonCount, status)
     if _progressCallback then
         _progressCallback(specIdx, specCount, dungeonIdx, dungeonCount, status)
@@ -401,6 +414,9 @@ ScanStep = function()
         _state.specIdx = _state.specIdx + 1
     end
 
+    LogStepProgress(_state, (_state.specIdx - 1) * #_state.dungeons + (_state.dungeonIdx - 1),
+        #_state.specs * #_state.dungeons)
+
     -- Notify progress (may call into DungeonOverview to update button text).
     NotifyProgress(_state.specIdx, #_state.specs, _state.dungeonIdx, #_state.dungeons, nil)
 
@@ -735,6 +751,9 @@ RaidScanStep = function()
         _raidState.encounterIdx = 1
         _raidState.specIdx = _raidState.specIdx + 1
     end
+
+    LogStepProgress(_raidState, (_raidState.specIdx - 1) * #_raidState.encounters + (_raidState.encounterIdx - 1),
+        #_raidState.specs * #_raidState.encounters)
 
     NotifyRaidProgress(_raidState.specIdx, #_raidState.specs, _raidState.encounterIdx, #_raidState.encounters, nil)
     C_Timer.After(STEP_DELAY, RaidScanStep)

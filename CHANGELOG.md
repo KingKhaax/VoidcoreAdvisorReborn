@@ -5,6 +5,8 @@ Version: 2.9.0
 - [Settings] A new "Text size" control in the General tab: the - and + buttons make the text of the addon and all its windows smaller or bigger (80% to 160%, in steps of 10%) and a Reset button goes back to 100%. The choice is saved. Windows that are already open need to be opened again to show the new size completely.
 - [Panel] The "Mark rolled item" button is orange instead of red while mark mode is on ("Click to save"), with a lighter orange on hover, so it no longer looks like a warning.
 
+- [Scan] The Voidcache scan of dungeons and of raids now writes its progress in the chat: a line each time it passes 10%, with the steps done, for example "Scanning… 30% (7/24)", up to 100% before the final summary.
+
 🛠️ Fix
 - [Fonts] The text of the addon no longer grows when another addon makes all the game fonts bigger. The addon fonts used to copy the size of the game fonts, so with such an addon the windows (for example the bonus roll window) showed text that was too large and covered other lines. They now keep their own fixed sizes, the addon puts them back if another addon changes them, and checks them again when you enter the world.
 
