@@ -40,15 +40,24 @@ local BUILTIN = {
 local objects = {}
 local enforcing = false
 
+-- Text size chosen in the settings: 1 = the sizes above.
+local MIN_SCALE, MAX_SCALE, SCALE_STEP = 0.8, 1.6, 0.1
+local scale = 1
+
+local function TargetSize(o)
+    return math.floor(o.size * scale + 0.5)
+end
+
 -- Puts the fixed size back on one object if something else changed it.
 local function EnforceSize(o)
     if enforcing or not (o.obj and o.obj.GetFont) then
         return
     end
     local path, size, flags = o.obj:GetFont()
-    if path and size and math.abs(size - o.size) > 0.01 then
+    local target = TargetSize(o)
+    if path and size and math.abs(size - target) > 0.01 then
         enforcing = true
-        pcall(o.obj.SetFont, o.obj, path, o.size, flags or "")
+        pcall(o.obj.SetFont, o.obj, path, target, flags or "")
         enforcing = false
     end
 end
@@ -158,7 +167,7 @@ function Fonts.Apply(name)
                 _, _, flags = base:GetFont()
             end
             local path = (o.heading and bold) or regular
-            local ok = pcall(o.obj.SetFont, o.obj, path, o.size, flags or "")
+            local ok = pcall(o.obj.SetFont, o.obj, path, TargetSize(o), flags or "")
             if ok then
                 applied = true
             elseif base then
@@ -184,6 +193,38 @@ function Fonts.Current()
     return gdb and gdb.fontName or nil
 end
 
+-- Text size: a multiplier of the addon font sizes (saved with the settings).
+function Fonts.GetScale()
+    return scale
+end
+
+-- Sets the multiplier (kept between 0.8 and 1.6, in steps of 0.1) and applies it.
+function Fonts.SetScale(value)
+    value = tonumber(value) or 1
+    value = math.min(MAX_SCALE, math.max(MIN_SCALE, math.floor(value / SCALE_STEP + 0.5) * SCALE_STEP))
+    scale = value
+    local gdb = GDB()
+    if gdb then
+        gdb.fontScale = (math.abs(value - 1) > 0.001) and value or nil
+    end
+    Fonts.Apply(Fonts.Current())
+    Fonts.EnforceSizes()
+    return value
+end
+
+function Fonts.CanScale(direction)
+    if direction > 0 then
+        return scale < MAX_SCALE - 0.001
+    end
+    return scale > MIN_SCALE + 0.001
+end
+
+function Fonts.LoadScale()
+    local gdb = GDB()
+    local saved = gdb and tonumber(gdb.fontScale)
+    scale = saved and math.min(MAX_SCALE, math.max(MIN_SCALE, saved)) or 1
+end
+
 -- Apply the saved choice once every addon has loaded (others register their fonts on the way),
 -- and again when the chosen font gets registered late.
 local loader = CreateFrame("Frame")
@@ -195,6 +236,7 @@ loader:SetScript("OnEvent", function(_, event)
         C_Timer.After(2, Fonts.EnforceSizes)
         return
     end
+    Fonts.LoadScale()
     Fonts.Apply(Fonts.Current())
     Fonts.EnforceSizes()
     C_Timer.After(2, Fonts.EnforceSizes)

@@ -420,13 +420,13 @@ local function PaintMarkModeButton()
     local t = VCA.Theme
     if Panel.markMode then
         if markHovered then
-            markModeBtn:SetBackdropColor(0.23, 0.07, 0.07, 1)
-            markModeBtn:SetBackdropBorderColor(0.93, 0.33, 0.33, 1)
+            markModeBtn:SetBackdropColor(0.30, 0.16, 0.03, 1)
+            markModeBtn:SetBackdropBorderColor(1, 0.64, 0.18, 1)
         else
-            markModeBtn:SetBackdropColor(0.165, 0.05, 0.05, 1)
-            markModeBtn:SetBackdropBorderColor(0.64, 0.2, 0.2, 1)
+            markModeBtn:SetBackdropColor(0.22, 0.12, 0.02, 1)
+            markModeBtn:SetBackdropBorderColor(0.85, 0.5, 0.1, 1)
         end
-        markHover:SetColorTexture(1, 0.35, 0.3, 0.08)
+        markHover:SetColorTexture(1, 0.6, 0.15, 0.1)
     else
         local f = markHovered and 1 or 0.5
         markModeBtn:SetBackdropColor(t.timerBg[1] + (t.timer[1] - t.timerBg[1]) * f,
@@ -442,7 +442,7 @@ local function UpdateMarkModeButton()
         for _ in pairs(Panel.pendingMarks) do
             n = n + 1
         end
-        markModeText:SetText("|cffff8b7a" .. L["MARK_MODE_ACTIVE"] .. (n > 0 and (" (" .. n .. ")") or "") .. "|r")
+        markModeText:SetText("|cffffb347" .. L["MARK_MODE_ACTIVE"] .. (n > 0 and (" (" .. n .. ")") or "") .. "|r")
     else
         markModeText:SetText("+ " .. L["MARK_MODE_BUTTON"])
     end

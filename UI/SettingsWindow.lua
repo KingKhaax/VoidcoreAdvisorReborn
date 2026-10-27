@@ -461,6 +461,46 @@ local function FontRow(pane)
     end, true)
 end
 
+-- ── Text size ─────────────────────────────────────────────────────────────────
+-- [-] 100% [+]: makes the text of the addon bigger or smaller (reopen open windows to see it all).
+
+local function TextSizeRow(pane)
+    Row(pane, L["SETTINGS_TEXTSIZE_LABEL"], L["SETTINGS_TEXTSIZE_TIP"], function(row)
+        local box = CreateFrame("Frame", nil, row)
+        box:SetSize(330, 24)
+        local minus = Button(box, "-", 30, nil)
+        minus:SetPoint("LEFT", box, "LEFT", 0, 0)
+        local value = box:CreateFontString(nil, "OVERLAY", "VCAFontHighlight")
+        value:SetPoint("LEFT", minus, "RIGHT", 0, 0)
+        value:SetWidth(70)
+        value:SetJustifyH("CENTER")
+        local plus = Button(box, "+", 30, nil)
+        plus:SetPoint("LEFT", value, "RIGHT", 0, 0)
+        local reset = Button(box, L["SETTINGS_TEXTSIZE_RESET"], 110, nil)
+        reset:SetPoint("LEFT", plus, "RIGHT", 12, 0)
+        function box.Update()
+            value:SetText(math.floor(VCA.Fonts.GetScale() * 100 + 0.5) .. "%")
+            minus:SetAlpha(VCA.Fonts.CanScale(-1) and 1 or 0.4)
+            plus:SetAlpha(VCA.Fonts.CanScale(1) and 1 or 0.4)
+        end
+        local function change(newScale)
+            VCA.Fonts.SetScale(newScale)
+            box.Update()
+        end
+        minus:SetScript("OnClick", function()
+            change(VCA.Fonts.GetScale() - 0.1)
+        end)
+        plus:SetScript("OnClick", function()
+            change(VCA.Fonts.GetScale() + 0.1)
+        end)
+        reset:SetScript("OnClick", function()
+            change(1)
+        end)
+        widgets[#widgets + 1] = box
+        return box
+    end)
+end
+
 local function ApplyAndRefresh()
     VCA.ApplyTheme(GDB().theme)
     if VCA.Panel and VCA.Panel.Refresh then
@@ -492,6 +532,7 @@ local function BuildPanes()
     end)
     SwitchRow(general, "weeklySummary", L["OPTIONS_SUMMARY"], L["OPTIONS_SUMMARY_TOOLTIP"])
     FontRow(general)
+    TextSizeRow(general)
 
     local reminder = NewPane(L["OPTIONS_CAT_REMINDER"], L["SETTINGS_SUB_REMINDER"])
     SwitchRow(reminder, "reminderEnabled", L["OPTIONS_REMINDER_ENABLE"], L["OPTIONS_REMINDER_TOOLTIP"])
