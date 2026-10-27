@@ -117,6 +117,9 @@ function Overview.AnchorToEJ()
     if not ej then
         return
     end
+    if VCA.Panel.ApplyFreePlacement(frame, false) then
+        return
+    end
     frame:ClearAllPoints()
     frame:SetPoint("TOPLEFT", ej, "TOPRIGHT", 52, 0)
 end
@@ -132,6 +135,13 @@ closeBtn:SetPoint("TOPRIGHT", -4, -4)
 closeBtn:SetScript("OnClick", function()
     frame:Hide()
 end)
+-- Pin button next to the X, and a draggable title row (the same pinned / free state as the panel).
+VCA.Panel.CreatePinButton(frame, closeBtn, function()
+    if frame:IsShown() then
+        Overview.AnchorToEJ()
+    end
+end)
+VCA.Panel.MakeDraggable(frame, 170)
 
 -- ── Scan button ───────────────────────────────────────────────────────────────
 

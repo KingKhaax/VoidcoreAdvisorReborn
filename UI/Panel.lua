@@ -88,28 +88,39 @@ local function GetPlacement()
     return gdb and gdb.panelPlacement
 end
 
-local function ApplyPlacement(p)
-    frame:ClearAllPoints()
-    frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", p.x, p.y)
-    frame:SetSize(p.w, p.h)
+local function ApplyPlacement(p, f)
+    f = f or frame
+    f:ClearAllPoints()
+    f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", p.x, p.y)
+    f:SetSize(p.w, p.h)
 end
 
--- Freezes the current position and size so the panel can be moved or resized freely.
-local function Freeze()
-    local x, y = frame:GetLeft(), frame:GetTop()
+-- Freezes the current position and size so the window can be moved or resized freely.
+-- f is the window (the panel unless an overview asks).
+local function Freeze(f)
+    f = f or frame
+    local x, y = f:GetLeft(), f:GetTop()
     if not (x and y) then
         return nil
     end
-    local p = {x = x, y = y, w = frame:GetWidth(), h = frame:GetHeight()}
-    ApplyPlacement(p)
+    local p = {x = x, y = y, w = f:GetWidth(), h = f:GetHeight()}
+    ApplyPlacement(p, f)
     return p
 end
 
-local function SavePlacement()
+local function SavePlacement(f)
+    f = f or frame
     local gdb = _G[VCA.GLOBAL_DB_NAME]
-    local x, y = frame:GetLeft(), frame:GetTop()
+    local x, y = f:GetLeft(), f:GetTop()
     if gdb and x and y then
-        gdb.panelPlacement = {x = x, y = y, w = frame:GetWidth(), h = frame:GetHeight()}
+        local w, h = f:GetWidth(), f:GetHeight()
+        if f ~= frame then
+            -- an overview only gives the position; the size stays the panel's
+            local old = gdb.panelPlacement
+            w = old and old.w or frame:GetWidth()
+            h = old and old.h or frame:GetHeight()
+        end
+        gdb.panelPlacement = {x = x, y = y, w = w, h = h}
     end
 end
 
@@ -118,6 +129,43 @@ end
 function Panel.IsPinned()
     local gdb = _G[VCA.GLOBAL_DB_NAME]
     return not (gdb and gdb.panelFree)
+end
+
+-- For the overviews: when the panel is free, puts the window at the saved position (keeping its width;
+-- useHeight also takes the saved height).  Returns true when it did.
+function Panel.ApplyFreePlacement(f, useHeight)
+    local placement = GetPlacement()
+    if Panel.IsPinned() or not placement then
+        return false
+    end
+    f:ClearAllPoints()
+    f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", placement.x, placement.y)
+    if useHeight then
+        f:SetHeight(placement.h)
+    end
+    return true
+end
+
+-- Lets a window be dragged by its title row; dragging a pinned window lets it go.
+function Panel.MakeDraggable(f, rightInset)
+    f:SetMovable(true)
+    local handle = CreateFrame("Frame", nil, f)
+    handle:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 0)
+    handle:SetPoint("TOPRIGHT", f, "TOPRIGHT", -(rightInset or 70), 0)
+    handle:SetHeight(30)
+    handle:EnableMouse(true)
+    handle:RegisterForDrag("LeftButton")
+    handle:SetScript("OnDragStart", function()
+        if Panel.IsPinned() then
+            Panel.SetPinned(false, f)
+        end
+        Freeze(f)
+        f:StartMoving()
+    end)
+    handle:SetScript("OnDragStop", function()
+        f:StopMovingOrSizing()
+        SavePlacement(f)
+    end)
 end
 
 function Panel.AnchorToEJ()
@@ -152,22 +200,35 @@ closeBtn:SetScript("OnClick", function()
 end)
 
 -- Pin button, just left of the X: pinned = stuck to the Adventure Guide, unpinned = free to move.
-local pinBtn = CreateFrame("Button", nil, frame)
-pinBtn:SetSize(22, 22)
-pinBtn:SetPoint("RIGHT", closeBtn, "LEFT", 4, 0)
-pinBtn:SetNormalTexture("Interface\\Buttons\\LockButton-Locked-Up")
-pinBtn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
-pinBtn:SetScript("OnClick", function()
-    Panel.SetPinned(not Panel.IsPinned())
-end)
-pinBtn:SetScript("OnEnter", function(self)
-    GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
-    GameTooltip:SetText(Panel.IsPinned() and L["PANEL_PINNED_TIP"] or L["PANEL_UNPINNED_TIP"], 1, 1, 1, 1, true)
-    GameTooltip:Show()
-end)
-pinBtn:SetScript("OnLeave", function()
-    GameTooltip:Hide()
-end)
+-- The panel and the two overviews each get one; the state is shared by the three windows.
+local pinButtons = {}
+local pinWindows = {} -- the windows that re-anchor themselves with their own AnchorToEJ
+
+function Panel.CreatePinButton(owner, closeButton, reanchor)
+    local btn = CreateFrame("Button", nil, owner)
+    btn:SetSize(22, 22)
+    btn:SetPoint("RIGHT", closeButton, "LEFT", 4, 2)
+    btn:SetNormalTexture("Interface\\Buttons\\LockButton-Locked-Up")
+    btn:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight", "ADD")
+    btn:SetScript("OnClick", function()
+        Panel.SetPinned(not Panel.IsPinned(), owner)
+    end)
+    btn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_BOTTOMRIGHT")
+        GameTooltip:SetText(Panel.IsPinned() and L["PANEL_PINNED_TIP"] or L["PANEL_UNPINNED_TIP"], 1, 1, 1, 1, true)
+        GameTooltip:Show()
+    end)
+    btn:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
+    pinButtons[#pinButtons + 1] = btn
+    if reanchor then
+        pinWindows[#pinWindows + 1] = {frame = owner, anchor = reanchor}
+    end
+    return btn
+end
+
+local pinBtn = Panel.CreatePinButton(frame, closeBtn)
 Panel.pinBtn = pinBtn
 
 -- Persist item selections when the panel hides (close, navigate away, logout).
@@ -1661,19 +1722,28 @@ frame:SetScript("OnSizeChanged", function()
 end)
 
 -- Pins the panel to the Adventure Guide (true) or frees it where it is (false).
-function Panel.SetPinned(pinned)
+-- source is the window whose position becomes the free one (the panel unless an overview asks).
+function Panel.SetPinned(pinned, source)
     local gdb = _G[VCA.GLOBAL_DB_NAME]
     if not gdb then
         return
     end
+    source = source or frame
     if pinned then
         gdb.panelFree = nil
         gdb.panelPlacement = nil
         Panel.AnchorToEJ()
+        for _, w in ipairs(pinWindows) do
+            w.anchor()
+        end
     else
         gdb.panelFree = true
-        if Freeze() then
-            SavePlacement()
+        if Freeze(source) then
+            SavePlacement(source)
+        end
+        Panel.AnchorToEJ()
+        for _, w in ipairs(pinWindows) do
+            w.anchor()
         end
     end
     Panel.UpdatePinButton()
@@ -1686,8 +1756,10 @@ end
 -- Pin icon (locked / unlocked) and the resize grip, which only a free panel has.
 function Panel.UpdatePinButton()
     local pinned = Panel.IsPinned()
-    pinBtn:SetNormalTexture(pinned and "Interface\\Buttons\\LockButton-Locked-Up" or
-                                "Interface\\Buttons\\LockButton-Unlocked-Up")
+    local texture = pinned and "Interface\\Buttons\\LockButton-Locked-Up" or "Interface\\Buttons\\LockButton-Unlocked-Up"
+    for _, b in ipairs(pinButtons) do
+        b:SetNormalTexture(texture)
+    end
     grip:SetShown(not pinned)
 end
 
