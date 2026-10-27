@@ -1,0 +1,21 @@
+[
+  {
+    "date": "2026-10-27",
+    "version": "2.9.0",
+    "notes": [
+      "Nuevo: el panel y los dos resúmenes se pegan a la Guía de aventuras, con un botón de chincheta junto a la X (y /void resetpanel).",
+      "Nuevo: control de tamaño del texto en General y texto del addon protegido frente a addons de fuentes.",
+      "Nuevo: ventana de tirada más limpia, con el origen coloreado como los parses (Mítica+ de gris a dorado, dificultad de banda verde/morada/dorada) y fichas de especialización.",
+      "Nuevo: seguimiento de tiradas más fiable (dificultad real, desmarcar se mantiene, ilvl en el mensaje) y progreso del escaneo en el chat.",
+      "Nuevo: historial de tiradas clicable, comprobación de tooltips de banda (/void tooltips) y resumen con la especialización que más objetos cubre.",
+      "Nuevo en la lista de comandos: /void scan, /void rolls y /void tooltips."
+    ]
+  },
+  {
+    "date": "2026-10-23",
+    "version": "2.7.0",
+    "notes": [
+      "Descripción anterior: elegir por hueco en banda, abalorios de daño para tanques, ventana de tirada rediseñada, 22 temas, cambio de fuente, comandos de herramientas."
+    ]
+  }
+]

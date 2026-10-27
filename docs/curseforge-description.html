@@ -1,0 +1,104 @@
+<h2>VoidcoreAdvisor Reborn</h2>
+<p><strong>VoidcoreAdvisor Reborn is a continuation of the addon VoidcoreAdvisor by rolferik12.</strong> It is made with the author's permission, using his MIT license, his name and his original files, with my own improvements integrated on top. All credit for the original addon goes to rolferik12. The original is no longer updated and does not work on the current patch; Reborn keeps it alive.</p>
+<p><img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/journal-panel-v3.png" alt="VoidcoreAdvisor Reborn panel next to the Adventure Guide" width="800"></p>
+
+<h2>What it does</h2>
+<p>VoidcoreAdvisor Reborn is a World of Warcraft addon for Retail (patch 12.1.7) that helps you make informed decisions when spending Nebulous Voidcores. It attaches a side panel to the Adventure Guide (Encounter Journal) that displays the full loot pool for each raid boss or Mythic+ dungeon, broken down by specialization, alongside probability rankings that show which loot spec gives you the best odds of receiving the items you are after.</p>
+<p>When you open the Adventure Guide and browse a boss or dungeon, the addon automatically shows every item available from that source. You can select the specific items you are chasing, and the panel recalculates the probability for each of your specializations in real time, telling you the exact percentage chance that a Voidcore roll will land on one of your selected items for each spec. Specs with smaller remaining loot pools rank higher because each individual item has a greater share of the roll.</p>
+<p><img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/panel-boss-v3.png" alt="Loot and spec ranking for a raid boss" width="600"></p>
+<p>The addon tracks which items you have already obtained, either through manual marking, through automatic detection after boss kills and Mythic+ completions, or by scanning your loot specializations against the Nebulous Voidcache to determine which items each spec can receive. Obtained items are excluded from the remaining pool calculations, so your probability numbers stay accurate as you gear up over the course of a season. Item selections and obtained status are saved per character.</p>
+
+<h2>What's new in Reborn</h2>
+<ul>
+<li><strong>The panel sticks to the Adventure Guide.</strong> The panel, the raid overview and the dungeon overview stay attached to the guide and follow it. A <strong>pin button next to the X</strong> lets go of them (drag a window by its title row, or press the pin) or sticks them back; <code>/void resetpanel</code> pins them again.</li>
+<li><strong>Text size:</strong> a new control in the General tab (80% to 160%) makes the text of the addon and all its windows smaller or bigger. The addon text also keeps its own size when another addon (for example FontControl) enlarges the game fonts.</li>
+<li><strong>A cleaner bonus roll window:</strong> the item name, then where the roll comes from (the boss with its difficulty, or Mythic +level), then the cost and your specializations as chips. The origin line is colored like log parses: a Mythic+ key goes from grey (+2) through green and blue to purple (+7 to +9) and gold (+10 and above), and the raid difficulty is green on Normal, purple on Heroic and gold on Mythic.</li>
+<li><strong>More accurate roll tracking.</strong> A roll is filed under the keystone or raid you are really in (not the boss open in the panel), and its difficulty is read from the item itself, so a Heroic roll is not marked as Mythic. Rolls saved by older versions are corrected. An item you unmark no longer comes back when you log in, and the chat message shows the item level.</li>
+<li><strong>Scan progress in the chat</strong> (a line every 10%), and every message of the addon follows the language of your game.</li>
+<li>The roll history (<code>/void history</code>) can be used: hover an item for its tooltip, Shift-click to put it in the chat, Ctrl-click to try it on.</li>
+<li>Raid items keep the effect text in their tooltip (<code>/void tooltips</code> checks all of them), and when you choose items that no single specialization can loot, the overview uses the specialization that covers the most of them instead of showing 0%.</li>
+<li>Works on the current patch (the removed global item functions were replaced with their <code>C_Item</code> versions).</li>
+<li>Fixed Voidcore rolls not being tracked when the boss selected in the Adventure Guide was not the boss that dropped the item. Rolls saved by the old version are applied again when you log in.</li>
+<li>Loot of The Unbinding of Kith'ix ships with the addon, for every class and spec. A banner warns you when a newer raid is missing from the data, and <code>/void liveraid</code> reads it from the Adventure Guide.</li>
+<li>New <strong>Mark rolled item</strong> bar in two steps: press it, click the items you got (they dim right away), then press it again to save. Hold Shift to mark everything between two clicks.</li>
+<li><strong>Cumulative odds</strong> under the spec ranking: your chance to get at least one chosen item with 1 roll, 3 rolls and with the Voidcores you have.</li>
+<li><code>/void cores</code> (Voidcores you have, spent this week and needed for your list), <code>/void next</code> (where to spend the next one, best first), <code>/void history</code> (your rolls and luck) and <code>/void chars</code> (what each of your characters still needs).</li>
+<li><strong>Wishlist:</strong> item priorities (<code>/void prio</code>, best in slot or alternative, used by the spec ranking), <code>/void wish</code> to paste a list of item IDs or links (for example from Raidbots) and a green + button that chooses everything your loot spec can still get.</li>
+<li>A weekly summary at login tells you how many chosen items you still miss, and the raid overview links to the list of all your characters.</li>
+<li>A settings window of its own (<code>/void open</code> or the addon button in the game's Options) with tabs for the look, the reminder, the bonus roll, shortcuts to every tool and a Version tab with what each version adds and the credits.</li>
+<li>A new spec ranking with a progress bar per spec, and items that will not drop for the spec in use tinted red (dark = already obtained).</li>
+<li><strong>Select by slot for raids</strong>, like the one for dungeons: a grid of equipment slots at the bottom of the raid overview to choose the items of a slot on every boss at once.</li>
+<li>Tank specializations also get the damage trinkets of their class that use the same main stat.</li>
+<li>The panel shows the difficulty (Normal, Heroic, Mythic, Raid Finder, or Mythic+) next to the boss or dungeon name.</li>
+<li>Redesigned bonus roll window: your chance of a chosen item in a big figure next to the icons of those items, a row with your specializations (click another one to switch your loot spec), a timer with the time left, a green Roll button, a red Pass button and an optional "Are you sure?" confirmation. It is enabled by default.</li>
+<li><strong>Change the font</strong> of the addon and all its windows from the settings: the fonts of the game, Source Sans 3 (included) and every font that other addons add through LibSharedMedia, each name shown in its own font.</li>
+<li>The loot spec reminder also appears in front of raid bosses (once per boss, again after a wipe), with its own option and a flat themed look.</li>
+<li>22 color themes: venom green (default), void purple, arcane blue, light, fire, frost, red, one for each class, plus one that follows you. The color theme, the roll window and the reminder each have their own selector and a <strong>Preview</strong> button in the settings window. <code>/void open</code> opens that window directly.</li>
+<li><code>/void missing</code> lists every item you still need, best odds first.</li>
+<li><code>/void panel</code> opens the Adventure Guide on a boss or dungeon.</li>
+<li><code>/void export</code> and <code>/void import</code> copy your marked items between characters.</li>
+<li>The panel can be moved and resized, and the raid overview shows a progress bar per boss. The raid overview explains what to do instead of showing an empty table.</li>
+<li>Louder warning when only 1 item is left for your spec.</li>
+<li>The "Click to save" button of the Mark rolled item mode is orange.</li>
+<li>All texts translated in 11 languages.</li>
+<li><code>/void debug</code> opens a window with the information to attach to a bug report.</li>
+</ul>
+<p><em>Important: disable or remove the original VoidcoreAdvisor before using Reborn, because both use the same saved variables.</em></p>
+
+<h2>Mythic+ dungeons and raids</h2>
+<p>The panel works for raid bosses (Normal, Heroic, Mythic) and for Mythic+ dungeons, with an adjustable key level that updates tooltip item levels to match the Voidcore reward track. Slot filters and spec/item filtering with cross-column highlighting help you compare options.</p>
+<p><img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/panel-mplus-v3.png" alt="Mythic+ dungeon panel" width="560"> <img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/panel-raid-v3.png" alt="Raid overview with the odds per boss" width="440"></p>
+
+<h2>Mark rolled item</h2>
+<p>Got an item from a Voidcore roll that the addon did not track? Press the green <strong>Mark rolled item</strong> bar at the bottom of the loot list, then click the items you got. Click an item again to unmark it, or hold Shift and click a second item to mark everything in between.</p>
+
+<h2>Bonus roll window</h2>
+<p>When a Nebulous Voidcore prompt appears, Reborn replaces the default prompt with a window that shows the item, where the roll comes from (the boss and its difficulty, or Mythic +level, colored like log parses), your Voidcore count, the cost of the roll, the wanted items you still need, your specializations as chips with the number of items left (click one to switch your loot spec) and a live timer. The green Roll button and the red Pass button can ask "Are you sure?" before acting (optional, on by default), so you cannot spend a Voidcore by accident. A red warning and a sound alert you when only 1 item is left for your spec. You can preview the window without spending anything with the Preview button next to the roll window theme in the options.</p>
+<p><img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/roll-window.png" alt="Bonus roll window" width="357"></p>
+
+<h2>Automatic Voidcache loot scanning</h2>
+<p>The addon can read the Nebulous Voidcache tooltip for every one of your loot specializations to determine exactly which items each spec can receive. Items that a spec cannot receive are marked as obtained, which removes them from that spec's remaining pool and keeps the probability numbers accurate without any manual work. The scan waits until the tooltip data has fully loaded, stops if you enter combat or change your loot spec, and saves a backup first; if the results look wrong, type <code>/void restore</code> to roll back.</p>
+<p><strong>Mythic+:</strong> click <strong>Scan Loot Specs</strong> in the top-right corner of the Dungeon Overview. <strong>Raid:</strong> click it in the Raid Overview. Both buttons are disabled inside instances and while a scan is running.</p>
+
+<h2>Overviews</h2>
+<p><strong>Dungeon Overview:</strong> ranks the current-season Mythic+ dungeons by your best possible Voidcore odds, with slot buttons to narrow the ranking to the pieces you are targeting.</p>
+<p><strong>Raid Overview:</strong> lists every boss with its best spec, the items remaining, the probability and a progress bar, so you can see which bosses are still worth rolling on.</p>
+
+<h2>Loot spec recommendations</h2>
+<p>When you enter a current-season Mythic+ dungeon, the addon checks whether your active loot spec is the best match for the items you selected. If another spec gives better odds and you have a Voidcore to spend, a popup shows your current spec, the recommended one and the odds, and lets you switch with one click. It appears once per dungeon and can be disabled.</p>
+<p><img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/reminder-popup.png" alt="Loot spec recommendation popup" width="434"></p>
+
+<h2>Options, themes and commands</h2>
+<p>The settings window (type <code>/void open</code>, or press the button of the addon in Game Menu &gt; Options &gt; AddOns) lets you choose the color theme of the panel, of the bonus roll window and of the reminder popup (a drop-down with every theme and a Preview button), the font and the text size, and toggle the bonus roll window, the confirmation step, the recommendation popup (also in front of raid bosses), the cumulative odds line and the per-spec item lists.</p>
+<p><img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/settings-general-v3.png" alt="Settings window, General tab" width="400"> <img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/settings-reminder-v3.png" alt="Settings window, Loot Spec Reminder tab" width="400"></p>
+<p><img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/settings-roll-v3.png" alt="Settings window, Bonus Roll tab" width="400"> <img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/settings-tools-v3.png" alt="Settings window, Tools tab" width="400"></p>
+<ul>
+<li><code>/void</code> shows the list of commands.</li>
+<li><code>/void open</code> opens the addon settings window (themes, previews and tools).</li>
+<li><code>/void panel [name]</code> opens the Adventure Guide on a boss or dungeon.</li>
+<li><code>/void missing [14|15|16]</code> lists every item you still need for your loot spec.</li>
+<li><code>/void cores [14|15|16]</code> shows the Voidcores you have, spent this week and needed for your list.</li>
+<li><code>/void next [14|15|16]</code> ranks bosses and dungeons by your chance of a chosen item.</li>
+<li><code>/void history</code> shows your Voidcore rolls with each item's icon and your luck compared with the odds.</li>
+<li><code>/void chars</code> lists what each of your characters still needs.</li>
+<li><code>/void prio &lt;item&gt; bis|alt|clear</code> sets an item priority.</li>
+<li><code>/void wish [min gain %]</code> chooses items from a pasted list of IDs, links or a Raidbots list.</li>
+<li><code>/void select [clear]</code> chooses everything your loot spec can still get from the open boss.</li>
+<li><code>/void export</code> and <code>/void import</code> copy your marked items between characters.</li>
+<li><code>/void theme &lt;name&gt;</code> changes the window colors (green, purple, blue, light, fire, frost, red, class, or a class such as mage or priest).</li>
+<li><code>/void preview</code> opens the sample window to try themes. <code>/void resetpanel</code> pins the panel to the Adventure Guide again.</li>
+<li><code>/void perf</code> shows the memory and CPU used by the addon.</li>
+<li><code>/void scan [raid 14|15|16]</code> reads your Voidcache to mark the items from coins you already used (progress shows in the chat).</li>
+<li><code>/void rolls</code> prints the raw list of your Voidcore rolls. <code>/void tooltips</code> checks that no raid item loses its effect text.</li>
+<li><code>/void debug</code>, <code>/void restore</code>, <code>/void replaylog</code>, <code>/void liveraid</code>, <code>/void version</code>.</li>
+</ul>
+
+<h2>Frequently asked questions</h2>
+<p><strong>I used the original VoidcoreAdvisor. Do I lose my data?</strong> No. Reborn uses the same saved variables, so your marked items and choices carry over. Remove or disable the original addon, put the <code>VoidcoreAdvisorReborn</code> folder in your AddOns folder and start the game.</p>
+<p><strong>What do I have to disable?</strong> The original VoidcoreAdvisor. Both register the same options and saved variables, so running them together causes errors. Reborn warns you in chat if it finds the original enabled.</p>
+<p><strong>A new raid is not in the addon yet.</strong> Reborn tells you with a message and a banner. Type <code>/void liveraid</code> to read its loot from the Adventure Guide, or wait for the next release.</p>
+<p><strong>How do I report a bug?</strong> Type <code>/void debug</code> in game, copy the text and open an issue on <a href="https://github.com/KingKhaax/VoidcoreAdvisorReborn/issues">GitHub</a> (there is a bug report template) or leave a comment here.</p>
+
+<h2>Credits and license</h2>
+<p>Original addon and artwork by rolferik12 (MIT license, copyright 2026 rolferik12). Reborn is maintained by KingKhaax and released under the same MIT license.</p>
+<p>Found a bug or have an idea? Open an <a href="https://github.com/KingKhaax/VoidcoreAdvisorReborn/issues">issue on GitHub</a> or leave a comment, and tell me which character, boss and difficulty it happened on.</p>
