@@ -1,3 +1,11 @@
+Version: 2.9.2
+2026/10/28 Released
+
+🛠️ Fix
+- [Release] The changelog shown on CurseForge and in WowUp no longer has garbled characters (the emojis of the titles and the ellipsis). Nothing changes inside the addon.
+
+---
+
 Version: 2.9.1
 2026/10/28 Released
 
