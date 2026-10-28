@@ -1,3 +1,14 @@
+Version: 2.9.3
+2026/10/28 Released
+
+🔮 New
+- [Scan] `/void scan owned` marks, for your current loot specialization, every pool item you have equipped or in your bags. It is for items you bought with Voidcores before the addon saw the roll, or that the Voidcache tooltip does not drop. It cannot tell a Voidcore roll from a normal drop, so unmark any that did not come from a roll.
+
+🛠️ Fix
+- [Detection] A Voidcore roll now marks the item only for the loot specialization you rolled with, not for every specialization that can get it. Reported on CurseForge.
+
+---
+
 Version: 2.9.2
 2026/10/28 Released
 
