@@ -44,7 +44,7 @@ $ids = @(); foreach ($name in $wanted) {
 if ($ids.Count -eq 0) { throw "No matching game versions." }
 
 # Changelog: the first section of CHANGELOG.md
-$text = (Get-Content (Join-Path $root "CHANGELOG.md") -Raw) -replace "`r`n", "`n"
+$text = (Get-Content (Join-Path $root "CHANGELOG.md") -Raw -Encoding UTF8) -replace "`r`n", "`n"
 $changelog = ($text -split "\n---\n")[0].Trim()
 
 if (-not (Test-Path $Zip)) { throw "Zip not found: $Zip" }
