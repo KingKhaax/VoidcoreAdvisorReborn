@@ -936,3 +936,47 @@ function Scan.GetBackupInfo()
     end
     return db.obtainedBackup.mythicPlusTime, db.obtainedBackup.raidTime
 end
+
+-- Marks, for the current loot specialization only, every pool item the character has equipped or in
+-- its bags. For items bought with Voidcores before the addon saw the roll, when the Voidcache
+-- tooltip does not drop them. It cannot tell a Voidcore roll from a normal drop.
+function Scan.Owned()
+    local owned = {}
+    for slot = 1, 19 do
+        local id = GetInventoryItemID("player", slot)
+        if id then
+            owned[id] = true
+        end
+    end
+    for bag = 0, NUM_BAG_SLOTS do
+        for slot = 1, C_Container.GetContainerNumSlots(bag) do
+            local id = C_Container.GetContainerItemID(bag, slot)
+            if id then
+                owned[id] = true
+            end
+        end
+    end
+
+    local specID = VCA.SpecInfo.GetEffectiveLootSpecID()
+    local marked = 0
+    local function Mark(contentType, sourceID, diffID, itemList)
+        for _, itemID in ipairs(itemList or {}) do
+            if owned[itemID] and not VCA.Data.IsObtained(contentType, sourceID, diffID, specID, itemID) then
+                VCA.Data.SetObtained(contentType, sourceID, diffID, specID, itemID, true)
+                marked = marked + 1
+            end
+        end
+    end
+
+    for instanceID, dungeon in pairs(VCA.SeasonData.dungeons) do
+        Mark(VCA.ContentType.MYTHIC_PLUS, instanceID, VCA.MythicPlusEJDifficulty,
+            dungeon.bySpec and dungeon.bySpec[specID])
+    end
+    for encounterID, raid in pairs(VCA.SeasonData.raids) do
+        for diffID, specMap in pairs(raid.bySpec or {}) do
+            Mark(VCA.ContentType.RAID, encounterID, diffID, specMap[specID])
+        end
+    end
+    Log(string.format(VCA.L["SCAN_OWNED_DONE"], marked))
+    return marked
+end

@@ -412,6 +412,7 @@ L["TOOLTIP_AUDIT_DONE"] = "Comprobación terminada: %d objetos corregidos con el
 L["SCAN_DONE"] = "Escaneo completado: %d objeto(s) único(s) marcado(s) como conseguido(s), %d de %d tooltips leídos."
 L["RAID_SCAN_DONE"] = "Escaneo de banda completado: %d objeto(s) único(s) marcado(s) como conseguido(s), %d de %d tooltips leídos."
 L["SCAN_UNREADABLE"] = "%d tooltip(s) no se pudieron leer a tiempo. No se cambió nada en ellos. Espera unos segundos y vuelve a escanear."
+L["SCAN_OWNED_DONE"] = "Se marcaron %d objeto(s) que llevas equipados o en las bolsas para tu especialización de botín actual. No distingue las tiradas de Núcleo del Vacío de los drops normales: desmarca los que no vengan de una tirada."
 L["SCAN_MISMATCH"] = "%d tooltip(s) no coincidían con ningún nombre de objeto que conoce el addon (¿idioma del cliente?). No se cambió nada en ellos."
 L["SCAN_UNCACHED"] = "%d nombre(s) de objeto aún no estaban cargados por el juego y no se pudieron comprobar. Abre la Guía de aventuras, espera unos segundos y vuelve a escanear."
 L["SCAN_HINT_DUNGEON"] = "No se marcó nada. Este escaneo solo lee el grupo de la llave de Mítica+ de nivel +10. Para tiradas de banda usa el botón de escaneo del resumen de bandas o /void scan raid 14, 15 o 16 (Normal, Heroico, Mítico). Las tiradas de llaves por debajo de +10 no se leen."

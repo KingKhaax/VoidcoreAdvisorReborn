@@ -437,7 +437,6 @@ local function OnCandidateItemDetected(itemID, source, specID)
 
     VCA.Data.SetObtainedForKeyTier(source.sourceType, source.sourceID, source.difficultyID, specID, itemID, isHighTier,
         true)
-    VCA.Data.PropagateObtainedToAllSpecs(source.sourceType, source.sourceID, source.difficultyID, itemID, isHighTier)
 
     if onDetectedCallback then
         onDetectedCallback(itemID, source, activeItemLevel)

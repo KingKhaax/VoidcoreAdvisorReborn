@@ -400,6 +400,7 @@ L["TOOLTIP_AUDIT_DONE"] = "Tooltip check done: %d items fixed with the effect bo
 L["SCAN_DONE"] = "Scan complete: %d unique item(s) marked as obtained, %d of %d tooltip(s) read."
 L["RAID_SCAN_DONE"] = "Raid scan complete: %d unique item(s) marked as obtained, %d of %d tooltip(s) read."
 L["SCAN_UNREADABLE"] = "%d tooltip(s) could not be read in time. Nothing was changed for them. Wait a few seconds and scan again."
+L["SCAN_OWNED_DONE"] = "Marked %d item(s) you have equipped or in your bags for your current loot specialization. This cannot tell Voidcore rolls from normal drops: unmark any that did not come from a roll."
 L["SCAN_MISMATCH"] = "%d tooltip(s) did not match any item name the addon knows (client language?). Nothing was changed for them."
 L["SCAN_UNCACHED"] = "%d item name(s) were not loaded by the game yet and could not be checked. Open the Adventure Guide, wait a few seconds and scan again."
 L["SCAN_HINT_DUNGEON"] = "Nothing was marked. This scan only reads the Mythic+ keystone +10 pool. For raid rolls use the scan button in the raid overview or /void scan raid 14, 15 or 16 (Normal, Heroic, Mythic). Rolls from keystones below +10 are not read."

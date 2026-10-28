@@ -11,6 +11,8 @@
 <h2>What's new in Reborn</h2>
 <ul>
 <li><strong>The panel sticks to the Adventure Guide.</strong> The panel, the raid overview and the dungeon overview stay attached to the guide and follow it. A <strong>pin button next to the X</strong> lets go of them (drag a window by its title row, or press the pin) or sticks them back; <code>/void resetpanel</code> pins them again.</li>
+<li><strong>Rolls mark only the specialization you rolled with.</strong> A Voidcore roll no longer marks the item for every specialization that can get it.</li>
+<li><code>/void scan owned</code> marks the pool items you have equipped or in your bags, for your current loot specialization. It is for items you bought with Voidcores before the addon saw the roll.</li>
 <li><strong>Text size:</strong> a new control in the General tab (80% to 160%) makes the text of the addon and all its windows smaller or bigger. The addon text also keeps its own size when another addon (for example FontControl) enlarges the game fonts.</li>
 <li><strong>A cleaner bonus roll window:</strong> the item name, then where the roll comes from (the boss with its difficulty, or Mythic +level), then the cost and your specializations as chips. The origin line is colored like log parses: a Mythic+ key goes from grey (+2) through green and blue to purple (+7 to +9) and gold (+10 and above), and the raid difficulty is green on Normal, purple on Heroic and gold on Mythic.</li>
 <li><strong>More accurate roll tracking.</strong> A roll is filed under the keystone or raid you are really in (not the boss open in the panel), and its difficulty is read from the item itself, so a Heroic roll is not marked as Mythic. Rolls saved by older versions are corrected. An item you unmark no longer comes back when you log in, and the chat message shows the item level.</li>
@@ -58,6 +60,7 @@
 
 <h2>Automatic Voidcache loot scanning</h2>
 <p>The addon can read the Nebulous Voidcache tooltip for every one of your loot specializations to determine exactly which items each spec can receive. Items that a spec cannot receive are marked as obtained, which removes them from that spec's remaining pool and keeps the probability numbers accurate without any manual work. The scan waits until the tooltip data has fully loaded, stops if you enter combat or change your loot spec, and saves a backup first; if the results look wrong, type <code>/void restore</code> to roll back.</p>
+<p>If the tooltip still lists items you already own, switch to the loot specialization you rolled with and type <code>/void scan owned</code>. It marks what you have equipped or in your bags, but it cannot tell a Voidcore roll from a normal drop, so unmark any item that did not come from a roll.</p>
 <p><strong>Mythic+:</strong> click <strong>Scan Loot Specs</strong> in the top-right corner of the Dungeon Overview. <strong>Raid:</strong> click it in the Raid Overview. Both buttons are disabled inside instances and while a scan is running.</p>
 
 <h2>Overviews</h2>

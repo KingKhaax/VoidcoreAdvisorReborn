@@ -328,7 +328,11 @@ SlashCmdList["VOIDCOREADVISOR"] = function(msg)
         -- the Voidcores you spent. "/void scan" = Mythic+ dungeons, "/void scan raid [14|15|16]".
         local scan = VCA.VoidcacheScan
         local ok, reason
-        if (msg:match("^%s*%S+%s+(%S+)") or ""):lower() == "raid" then
+        local arg = (msg:match("^%s*%S+%s+(%S+)") or ""):lower()
+        if arg == "owned" then
+            scan.Owned()
+            return
+        elseif arg == "raid" then
             ok, reason = scan.StartRaid(tonumber(msg:match("^%s*%S+%s+%S+%s+(%d+)")) or VCA.Difficulty.RAID_HEROIC)
         else
             ok, reason = scan.Start()
