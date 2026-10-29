@@ -133,6 +133,74 @@ local function ResolveSourceFromPromptData(promptData)
     }
 end
 
+-- Raids newer than the voidcache table (e.g. Kith'ix): the prompt title reads "<cache name>: <boss>",
+-- so match <boss> against the Encounter Journal names of the known raid encounters.
+local function NormalizeName(s)
+    return s and (s:lower():gsub("[%p%s]", ""))
+end
+
+local function ResolveSourceFromBossName(promptData, title)
+    local mapping = promptData and ITEM_CONTEXT_TO_SOURCE[promptData.itemContext]
+    local boss = title and title:match("^[^:]+:%s*(.+)$")
+    if not (mapping and mapping.contentType == VCA.ContentType.RAID and boss and EJ_GetEncounterInfo and
+        VCA.SeasonData and VCA.SeasonData.raids) then
+        return nil
+    end
+    boss = NormalizeName(boss)
+    for encounterID in pairs(VCA.SeasonData.raids) do
+        if NormalizeName(EJ_GetEncounterInfo(encounterID)) == boss then
+            return {
+                sourceType = mapping.contentType,
+                sourceID = encounterID,
+                difficultyID = mapping.ejDiffID
+            }
+        end
+    end
+end
+
+-- Last boss killed in a raid (ENCOUNTER_END): the roll that follows belongs to it. Matched by
+-- the dungeon encounter ID against the Encounter Journal of the raid you are in, then by name.
+local lastKill
+local killFrame = CreateFrame("Frame")
+killFrame:RegisterEvent("ENCOUNTER_END")
+killFrame:SetScript("OnEvent", function(_, _, dungeonEncounterID, name, _, _, success)
+    if success == 1 then
+        lastKill = {id = dungeonEncounterID, name = name}
+    end
+end)
+
+local function ResolveSourceFromLastKill(promptData)
+    local mapping = promptData and ITEM_CONTEXT_TO_SOURCE[promptData.itemContext]
+    if not (lastKill and mapping and mapping.contentType == VCA.ContentType.RAID and VCA.SeasonData and
+        VCA.SeasonData.raids) then
+        return nil
+    end
+    local function Source(encounterID)
+        return {sourceType = mapping.contentType, sourceID = encounterID, difficultyID = mapping.ejDiffID}
+    end
+    local mapID = select(8, GetInstanceInfo())
+    local ejInstanceID = VCA.LootPool and VCA.LootPool.GetSeasonRaidByMapID and VCA.LootPool.GetSeasonRaidByMapID(mapID)
+    if ejInstanceID and EJ_GetEncounterInfoByIndex then
+        local e = 1
+        while true do
+            local _, _, journalID, _, _, _, dungeonID = EJ_GetEncounterInfoByIndex(e, ejInstanceID)
+            if not journalID then
+                break
+            end
+            if dungeonID == lastKill.id and VCA.SeasonData.raids[journalID] then
+                return Source(journalID)
+            end
+            e = e + 1
+        end
+    end
+    local killName = NormalizeName(lastKill.name)
+    for encounterID in pairs(VCA.SeasonData.raids) do
+        if NormalizeName(EJ_GetEncounterInfo(encounterID)) == killName then
+            return Source(encounterID)
+        end
+    end
+end
+
 -- Copies Normal/Pushed/Highlight/Disabled textures from src onto dst so an
 -- interceptor button looks identical to the real Blizzard button.
 
@@ -160,7 +228,26 @@ win:SetFrameLevel(7)
 win:EnableMouse(true)
 win:EnableMouseMotion(true)
 win:SetClampedToScreen(true)
+win:SetMovable(true)
+win:RegisterForDrag("LeftButton")
+win:SetScript("OnDragStart", win.StartMoving)
+win:SetScript("OnDragStop", function(self)
+    self:StopMovingOrSizing()
+    local point, _, relPoint, x, y = self:GetPoint()
+    _G[VCA.GLOBAL_DB_NAME].rollWindowPos = {point, relPoint, x, y}
+end)
 win:Hide()
+
+-- Saved position (dragged by the user) or the given default anchor.
+local function PlaceWindow(defaultRelTo, defaultX, defaultY)
+    win:ClearAllPoints()
+    local pos = _G[VCA.GLOBAL_DB_NAME].rollWindowPos
+    if pos then
+        win:SetPoint(pos[1], UIParent, pos[2], pos[3], pos[4])
+    else
+        win:SetPoint("CENTER", defaultRelTo, "CENTER", defaultX, defaultY)
+    end
+end
 win:SetBackdrop({
     bgFile = "Interface\\Buttons\\WHITE8X8",
     edgeFile = "Interface\\Buttons\\WHITE8X8",
@@ -1167,7 +1254,10 @@ function BRC.Show()
     -- Prefer the authoritative source from SPELL_CONFIRMATION_PROMPT; fall back to the
     -- reverse-lookup + live GetInstanceInfo() approach when unavailable (e.g. preview).
     local source = (cachedPromptData and ResolveSourceFromPromptData(cachedPromptData)) or
-                       GetSourceFromDisplayItemID(cachedDisplayItemID)
+                       GetSourceFromDisplayItemID(cachedDisplayItemID) or
+                       ResolveSourceFromBossName(cachedPromptData, pf.Name and pf.Name:GetText()) or
+                       ResolveSourceFromBossName(cachedPromptData, iName) or
+                       ResolveSourceFromLastKill(cachedPromptData)
     if source and not source.difficultyID then
         -- Fallback path: GetSourceFromDisplayItemID does not set difficultyID.
         if source.sourceType == VCA.ContentType.MYTHIC_PLUS then
@@ -1200,8 +1290,7 @@ function BRC.Show()
     rollBtn:SetPoint("BOTTOM", win, "BOTTOM", -(btnW / 2 + 4), 12)
     passBtn:SetPoint("BOTTOM", win, "BOTTOM", (btnW / 2 + 4), 12)
 
-    win:ClearAllPoints()
-    win:SetPoint("CENTER", BonusRollFrame, "CENTER", 0, 0)
+    PlaceWindow(BonusRollFrame, 0, 0)
     win:SetFrameStrata(BonusRollFrame:GetFrameStrata())
     win:SetFrameLevel(BonusRollFrame:GetFrameLevel() + 10)
     BonusRollFrame:SetAlpha(0)
@@ -1372,9 +1461,16 @@ function BRC.ShowPreview()
     rollBtn:SetPoint("BOTTOM", win, "BOTTOM", -(btnW / 2 + 4), 12)
     passBtn:SetPoint("BOTTOM", win, "BOTTOM", (btnW / 2 + 4), 12)
 
-    win:ClearAllPoints()
-    win:SetPoint("CENTER", UIParent, "CENTER", 0, 100)
+    PlaceWindow(UIParent, 0, 100)
     win:Show()
+end
+
+-- Back to the default spot (over the Blizzard bonus roll frame).
+function BRC.ResetPosition()
+    _G[VCA.GLOBAL_DB_NAME].rollWindowPos = nil
+    if win:IsShown() then
+        PlaceWindow(UIParent, 0, 100)
+    end
 end
 
 -- â”€â”€ One-time hooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

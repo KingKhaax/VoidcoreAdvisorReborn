@@ -561,6 +561,20 @@ local function BuildPanes()
             end
         end)
 
+    Row(roll, L["OPTIONS_ROLL_MOVE"], L["OPTIONS_ROLL_MOVE_TIP"], function(row)
+        local box = CreateFrame("Frame", nil, row)
+        box:SetSize(230 + 10 + 120, 24)
+        local move = Button(box, L["OPTIONS_ROLL_MOVE_BTN"], 230, function()
+            if not (VCARollWindow and VCARollWindow:IsShown()) then
+                VCA.BonusRollConfirm.ShowPreview()
+            end
+        end)
+        move:SetPoint("LEFT", box, "LEFT", 0, 0)
+        local reset = Button(box, L["OPTIONS_ROLL_RESET_BTN"], 120, VCA.BonusRollConfirm.ResetPosition)
+        reset:SetPoint("RIGHT", box, "RIGHT", 0, 0)
+        return box
+    end, true)
+
     local tools = NewPane(L["SETTINGS_TAB_TOOLS"], L["SETTINGS_SUB_TOOLS"])
     for i, tool in ipairs(TOOLS) do
         local b = CreateFrame("Button", nil, tools, "BackdropTemplate")

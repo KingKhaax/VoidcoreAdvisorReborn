@@ -130,22 +130,6 @@ local function PopulateItemColumn(sourceType, sourceID, difficultyID, isHighTier
         end
     end
 
-    -- With no spec picked and nothing chosen, the items your own loot spec cannot get are
-    -- the ones that will not drop: they are tinted red.
-    local lootSpecSet
-    if not specFilterSet and not itemImpliedFilter then
-        local lootSpecID = VCA.SpecInfo.GetEffectiveLootSpecID()
-        if lootSpecID and lootSpecID > 0 then
-            lootSpecSet = {}
-            for _, id in ipairs(VCA.LootPool.GetItemsForSpec(sourceType, sourceID, difficultyID, classID, lootSpecID)) do
-                lootSpecSet[id] = true
-            end
-            if not next(lootSpecSet) then
-                lootSpecSet = nil
-            end
-        end
-    end
-
     -- Fetch enriched item data with class filter so the EJ returns only items
     -- relevant to this class (all specs).  Using the class filter ensures the
     -- client has cached data (name, icon) for every item returned.
@@ -412,7 +396,7 @@ local function PopulateItemColumn(sourceType, sourceID, difficultyID, isHighTier
         -- not lootable by the specs implied by the item selection.
         local specFiltered = specFilterSet and not specFilterSet[item.itemID]
         local itemFiltered = itemImpliedFilter and not itemImpliedFilter[item.itemID]
-        local otherSpec = specFiltered or itemFiltered or (lootSpecSet ~= nil and not lootSpecSet[item.itemID])
+        local otherSpec = specFiltered or itemFiltered
         local gotIt = obtained or obtainedMigrated
         -- Dark = you already got it. Red = it will not drop for the spec in use.
         local dimmed = gotIt or otherSpec

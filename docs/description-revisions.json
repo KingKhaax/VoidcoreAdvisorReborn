@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-10-29",
+    "version": "2.10.0",
+    "notes": [
+      "Nuevo: la ventana de tirada se puede mover (arrastrar; opciones Mover ventana y Restablecer en la pestaña Tirada extra).",
+      "Corregido: la ventana de tirada completa sale en todos los jefes de banda, también los nuevos como Kith'ix.",
+      "Mejorado: sin especialización pulsada, el panel ya no muestra tu especialización de botín ni tiñe objetos de rojo."
+    ]
+  },
+  {
     "date": "2026-10-28",
     "version": "2.9.1",
     "notes": [

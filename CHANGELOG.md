@@ -1,3 +1,17 @@
+Version: 2.10.0
+2026/10/29 Released
+
+🔮 New
+- [Roll window] The bonus roll window can now be moved: drag it with the left mouse button and it stays where you drop it, for real rolls and for the preview. A new row in the settings (bonus roll tab) has a Move window button, that opens the sample window so you can place it, and a Reset button that sends it back to its default spot.
+
+💪 Improvement
+- [Panel] With no specialization clicked in the spec ranking, the loot panel no longer shows your current loot specialization ("Loot:") nor tints the items of other specializations red. Both only happen after you click a specialization.
+
+🛠️ Fix
+- [Roll window] The full roll window (your odds, the specialization ranking and the wanted items) now appears for every raid boss, including new ones such as Kith'ix, instead of the plain window with only the timer and the buttons. When the Voidcache item of a boss is not in the addon's table, the boss is now found from the name in the roll title or from the last boss you killed.
+
+---
+
 Version: 2.9.3
 2026/10/28 Released
 

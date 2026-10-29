@@ -1463,7 +1463,7 @@ local function GetOrCreateSpecRow(pool, parent)
                 r.selHighlight:Hide()
             end
         end
-        Panel.RefreshItemColumn()
+        Panel.Refresh() -- also updates the "Loot:" label
     end)
 
     local row = {
@@ -1917,7 +1917,7 @@ function Panel.Refresh()
     markModeBtn:Show()
 
     -- Update loot spec label
-    local lootSpecID = VCA.SpecInfo.GetEffectiveLootSpecID()
+    local lootSpecID = next(selectedSpecIDs) -- only the spec the user clicked, not the current loot spec
     if lootSpecID and lootSpecID > 0 then
         local _, name, _, icon = GetSpecializationInfoByID(lootSpecID)
         if name then
