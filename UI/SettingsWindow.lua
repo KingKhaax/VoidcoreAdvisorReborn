@@ -32,8 +32,13 @@ local FLAT = {
     insets = {left = 1, right = 1, top = 1, bottom = 1}
 }
 
+-- This window has its own color theme (settingsTheme, green by default).
+local function SettingsPalette()
+    return VCA.GetPalette(GDB().settingsTheme or "green")
+end
+
 local function Accent()
-    return VCA.Theme.accent
+    return SettingsPalette().accent
 end
 
 -- On/off switch tied to a boolean in the account variables.
@@ -70,20 +75,28 @@ local function Switch(parent, key, afterChange)
     return b
 end
 
+local buttons = {} -- repainted when the theme of this window changes
+
 local function Button(parent, text, width, onClick)
     local b = CreateFrame("Button", nil, parent, "BackdropTemplate")
     b:SetSize(width, 24)
     b:SetBackdrop(FLAT)
-    b:SetBackdropColor(0.07, 0.23, 0.13, 1)
-    b:SetBackdropBorderColor(0.16, 0.48, 0.29, 1)
+    function b.Paint()
+        local a = Accent()
+        b:SetBackdropColor(a[1] * 0.3, a[2] * 0.3, a[3] * 0.3, 1)
+        b:SetBackdropBorderColor(a[1] * 0.7, a[2] * 0.7, a[3] * 0.7, 1)
+    end
+    b.Paint()
+    buttons[#buttons + 1] = b
     local fs = b:CreateFontString(nil, "OVERLAY", "VCAFontHighlight")
     fs:SetPoint("CENTER")
     fs:SetText(text)
     b:SetScript("OnEnter", function(self)
-        self:SetBackdropColor(0.1, 0.31, 0.18, 1)
+        local a = Accent()
+        self:SetBackdropColor(a[1] * 0.42, a[2] * 0.42, a[3] * 0.42, 1)
     end)
     b:SetScript("OnLeave", function(self)
-        self:SetBackdropColor(0.07, 0.23, 0.13, 1)
+        self.Paint()
     end)
     b:SetScript("OnClick", onClick)
     return b
@@ -188,7 +201,7 @@ end
 -- The arrows step through the themes; the name opens the list with all of them.
 local function ThemeSelector(parent, key, withCurrent, afterChange)
     local box = CreateFrame("Frame", nil, parent)
-    box:SetSize(230, 24)
+    box:SetSize(286, 24)
     local keys = {}
     if withCurrent then
         keys[#keys + 1] = "current"
@@ -196,45 +209,41 @@ local function ThemeSelector(parent, key, withCurrent, afterChange)
     for _, k in ipairs(VCA.THEME_ORDER) do
         keys[#keys + 1] = k
     end
+    -- Arrows step one theme at a time; the middle button shows the theme (swatch, name and a "v")
+    -- and opens the whole list under it.
     local prev = Button(box, "<", 24, nil)
     prev:SetPoint("LEFT", box, "LEFT", 0, 0)
     local nxt = Button(box, ">", 24, nil)
     nxt:SetPoint("RIGHT", box, "RIGHT", 0, 0)
-    local mid = CreateFrame("Button", nil, box, "BackdropTemplate")
-    mid:SetBackdrop(FLAT)
-    mid:SetBackdropColor(0.02, 0.06, 0.04, 1)
-    mid:SetBackdropBorderColor(0.16, 0.35, 0.25, 1)
+    local mid = Button(box, "", 240, nil)
     mid:SetPoint("TOPLEFT", prev, "TOPRIGHT", -1, 0)
     mid:SetPoint("BOTTOMRIGHT", nxt, "BOTTOMLEFT", 1, 0)
-    local label = mid:CreateFontString(nil, "OVERLAY", "VCAFontHighlight")
-    label:SetPoint("LEFT", mid, "LEFT", 8, 0)
-    label:SetPoint("RIGHT", mid, "RIGHT", -18, 0)
-    label:SetJustifyH("CENTER")
+    local swatch = mid:CreateTexture(nil, "OVERLAY")
+    swatch:SetSize(14, 14)
+    swatch:SetPoint("LEFT", mid, "LEFT", 8, 0)
+    local label = mid:CreateFontString(nil, "OVERLAY", "VCAFontNormal")
+    label:SetPoint("LEFT", swatch, "RIGHT", 8, 0)
+    label:SetPoint("RIGHT", mid, "RIGHT", -20, 0)
+    label:SetJustifyH("LEFT")
     label:SetWordWrap(false)
     local caret = mid:CreateFontString(nil, "OVERLAY", "VCAFontNormalSmall")
-    caret:SetPoint("RIGHT", mid, "RIGHT", -6, 0)
+    caret:SetPoint("RIGHT", mid, "RIGHT", -7, 0)
     caret:SetText("v")
-    mid:SetScript("OnEnter", function(self)
-        self:SetBackdropBorderColor(0.85, 0.72, 0.41, 1)
-    end)
-    mid:SetScript("OnLeave", function(self)
-        self:SetBackdropBorderColor(0.16, 0.35, 0.25, 1)
-    end)
-    local function IndexOf(value)
-        for i, k in ipairs(keys) do
-            if k == value then
-                return i
-            end
-        end
-        return 1
-    end
     function box.Update()
-        local v = GDB()[key]
-        label:SetText(v == "current" and L["THEME_CURRENT"] or VCA.ThemeLabel(v or keys[1]))
+        local v = GDB()[key] or keys[1]
+        label:SetText("|cffffffff" .. (v == "current" and L["THEME_CURRENT"] or VCA.ThemeLabel(v)) .. "|r")
+        local ok, palette = pcall(VCA.GetPalette, v)
+        local a = ok and palette and palette.accent or {0.5, 0.5, 0.5}
+        swatch:SetColorTexture(a[1], a[2], a[3], 1)
     end
     local function Step(delta)
-        local i = (IndexOf(GDB()[key]) - 1 + delta) % #keys + 1
-        GDB()[key] = keys[i]
+        local at = 1
+        for i, k in ipairs(keys) do
+            if k == (GDB()[key] or keys[1]) then
+                at = i
+            end
+        end
+        GDB()[key] = keys[(at - 1 + delta) % #keys + 1]
         box.Update()
         if afterChange then
             afterChange()
@@ -262,7 +271,7 @@ local function ThemeSelector(parent, key, withCurrent, afterChange)
             if afterChange then
                 afterChange()
             end
-        end, 250)
+        end, 220)
     end)
     widgets[#widgets + 1] = box
     return box
@@ -398,11 +407,13 @@ end
 local function ThemeRow(pane, key, label, hint, withCurrent, afterChange, onPreview)
     Row(pane, label, hint, function(row)
         local box = CreateFrame("Frame", nil, row)
-        box:SetSize(230 + 10 + 120, 24)
+        box:SetSize(onPreview and (286 + 10 + 120) or 286, 24)
         local sel = ThemeSelector(box, key, withCurrent, afterChange)
         sel:SetPoint("LEFT", box, "LEFT", 0, 0)
-        local preview = Button(box, L["OPTIONS_PREVIEW_REMINDER"], 120, onPreview)
-        preview:SetPoint("RIGHT", box, "RIGHT", 0, 0)
+        if onPreview then
+            local preview = Button(box, L["OPTIONS_PREVIEW_REMINDER"], 120, onPreview)
+            preview:SetPoint("RIGHT", box, "RIGHT", 0, 0)
+        end
         return box
     end, true)
 end
@@ -430,7 +441,7 @@ local function FontRow(pane)
     Row(pane, L["SETTINGS_FONT_LABEL"], L["SETTINGS_FONT_TIP"], function(row)
         local box = CreateFrame("Frame", nil, row)
         box:SetSize(330, 24)
-        local btn = Button(box, "", 250, nil)
+        local btn = Button(box, "", 200, nil)
         btn:SetPoint("LEFT", box, "LEFT", 0, 0)
         local nameText = btn:CreateFontString(nil, "OVERLAY", "VCAFontHighlight")
         nameText:SetPoint("LEFT", btn, "LEFT", 10, 0)
@@ -521,6 +532,8 @@ local TOOLS = {
 
 local function BuildPanes()
     local general = NewPane(L["SETTINGS_TAB_GENERAL"], L["SETTINGS_SUB_GENERAL"])
+    ThemeRow(general, "settingsTheme", L["OPTIONS_WINDOW_THEME"], L["OPTIONS_WINDOW_THEME_TOOLTIP"], true,
+        ApplyAndRefresh)
     ThemeRow(general, "theme", L["OPTIONS_THEME"], L["OPTIONS_THEME_TOOLTIP"], false, ApplyAndRefresh, function()
         VCA.ThemePreview.Toggle()
         PlaceBeside("VCAThemePreviewFrame")
@@ -561,17 +574,92 @@ local function BuildPanes()
             end
         end)
 
+    local moveSave -- the Save button of the position row, hidden while a layout sample is open
+    Row(roll, L["OPTIONS_ROLL_LAYOUT"], L["OPTIONS_ROLL_LAYOUT_TIP"], function(row)
+        local BRC = VCA.BonusRollConfirm
+        local box = CreateFrame("Frame", nil, row)
+        box:SetSize(286 + 10 + 120, 24)
+        -- Like the theme selectors: arrows step one layout at a time, the middle button opens the list.
+        local prev = Button(box, "<", 24, nil)
+        prev:SetPoint("LEFT", box, "LEFT", 0, 0)
+        local nxt = Button(box, ">", 24, nil)
+        nxt:SetPoint("LEFT", box, "LEFT", 262, 0)
+        local dd = Button(box, "", 240, nil)
+        dd:SetPoint("TOPLEFT", prev, "TOPRIGHT", -1, 0)
+        dd:SetPoint("BOTTOMRIGHT", nxt, "BOTTOMLEFT", 1, 0)
+        local name = dd:CreateFontString(nil, "OVERLAY", "VCAFontNormal")
+        name:SetPoint("LEFT", dd, "LEFT", 10, 0)
+        name:SetPoint("RIGHT", dd, "RIGHT", -20, 0)
+        name:SetJustifyH("LEFT")
+        name:SetWordWrap(false)
+        local caret = dd:CreateFontString(nil, "OVERLAY", "VCAFontNormalSmall")
+        caret:SetPoint("RIGHT", dd, "RIGHT", -7, 0)
+        caret:SetText("v")
+        function box.Update()
+            local id = BRC.GetLayoutID()
+            name:SetText("|cffffffff" .. id .. ". " .. L["ROLL_LAYOUT_" .. id] .. "|r")
+        end
+        local function Step(delta)
+            GDB().rollLayout = (BRC.GetLayoutID() - 1 + delta) % BRC.LAYOUT_COUNT + 1
+            box.Update()
+            BRC.RefreshPreview()
+        end
+        prev:SetScript("OnClick", function()
+            Step(-1)
+        end)
+        nxt:SetScript("OnClick", function()
+            Step(1)
+        end)
+        dd:SetScript("OnClick", function()
+            local entries = {}
+            for id = 1, BRC.LAYOUT_COUNT do
+                entries[id] = {key = id, label = id .. ". " .. L["ROLL_LAYOUT_" .. id]}
+            end
+            OpenChoiceList(dd, entries, BRC.GetLayoutID(), function(picked)
+                GDB().rollLayout = picked
+                box.Update()
+                BRC.RefreshPreview() -- an open sample changes to the new layout right away
+            end, 220)
+        end)
+        -- Preview toggles the sample beside the settings; it never touches the saved position.
+        local preview = Button(box, L["OPTIONS_PREVIEW_REMINDER"], 120, function()
+            if BRC.IsLayoutPreview() then
+                BRC.ClosePreview()
+            else
+                BRC.ShowPreview(true)
+                PlaceBeside("VCARollWindow")
+                if moveSave then
+                    moveSave:Hide()
+                end
+            end
+        end)
+        preview:SetPoint("RIGHT", box, "RIGHT", 0, 0)
+        widgets[#widgets + 1] = box
+        return box
+    end, true)
+
     Row(roll, L["OPTIONS_ROLL_MOVE"], L["OPTIONS_ROLL_MOVE_TIP"], function(row)
         local box = CreateFrame("Frame", nil, row)
-        box:SetSize(230 + 10 + 120, 24)
-        local move = Button(box, L["OPTIONS_ROLL_MOVE_BTN"], 230, function()
-            if not (VCARollWindow and VCARollWindow:IsShown()) then
-                VCA.BonusRollConfirm.ShowPreview()
+        box:SetSize(150 + 10 + 90 + 10 + 120, 24)
+        -- Save only exists while the sample window is open: it closes the sample and hides itself.
+        local save = Button(box, L["OPTIONS_ROLL_SAVE_BTN"], 90, VCA.BonusRollConfirm.ClosePreview)
+        save:Hide()
+        moveSave = save
+        VCARollWindow:HookScript("OnHide", function()
+            save:Hide()
+        end)
+        local move = Button(box, L["OPTIONS_ROLL_MOVE_BTN"], 150, function()
+            -- Opens at the saved position (beside the settings the first time) and moves from there.
+            VCA.BonusRollConfirm.ShowPreview()
+            if not VCA.BonusRollConfirm.HasSavedPosition() then
+                PlaceBeside("VCARollWindow")
             end
+            save:Show()
         end)
         move:SetPoint("LEFT", box, "LEFT", 0, 0)
         local reset = Button(box, L["OPTIONS_ROLL_RESET_BTN"], 120, VCA.BonusRollConfirm.ResetPosition)
-        reset:SetPoint("RIGHT", box, "RIGHT", 0, 0)
+        reset:SetPoint("LEFT", move, "RIGHT", 10, 0)
+        save:SetPoint("LEFT", reset, "RIGHT", 10, 0)
         return box
     end, true)
 
@@ -729,7 +817,7 @@ local function Build()
     local title = frame:CreateFontString(nil, "OVERLAY", "VCAFontNormalHuge")
     title:SetPoint("LEFT", icon, "RIGHT", 10, 0)
     VCA.OnTheme(function()
-        title:SetText(VCA.RebornTitle("VoidcoreAdvisor", VCA.GetPalette("current")))
+        title:SetText(VCA.RebornTitle("VoidcoreAdvisor", SettingsPalette()))
     end)
     local version = frame:CreateFontString(nil, "OVERLAY", "VCAFontHighlightSmall")
     version:SetPoint("TOPRIGHT", -46, -22)
@@ -803,7 +891,8 @@ local function Build()
     end
 
     VCA.OnTheme(function()
-        local b, e, a = VCA.Theme.bg, VCA.Theme.border, Accent()
+        local p = SettingsPalette()
+        local b, e, a = p.bg, p.border, p.accent
         frame:SetBackdropColor(b[1], b[2], b[3], 0.98)
         frame:SetBackdropBorderColor(e[1], e[2], e[3], 1)
         rule:SetColorTexture(e[1], e[2], e[3], 0.7)
@@ -814,6 +903,9 @@ local function Build()
         end
         for _, w in ipairs(widgets) do
             w.Update()
+        end
+        for _, btn in ipairs(buttons) do
+            btn.Paint()
         end
     end)
     SelectTab(1)

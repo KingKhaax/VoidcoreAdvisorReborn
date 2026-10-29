@@ -14,6 +14,7 @@ VCA.BonusRollConfirm = {}
 local BRC = VCA.BonusRollConfirm
 
 local isPreview = false
+local layoutPreview = false -- sample opened to try a layout: it sits beside the settings and is not movable
 local cachedItemLink = nil -- item link for icon tooltip
 local cachedDisplayItemID = nil -- numeric item ID from EJLinkButton.displayItemID
 local cachedSpecIcon = nil -- spec icon texture path for |T|t embedding
@@ -230,9 +231,16 @@ win:EnableMouseMotion(true)
 win:SetClampedToScreen(true)
 win:SetMovable(true)
 win:RegisterForDrag("LeftButton")
-win:SetScript("OnDragStart", win.StartMoving)
+win:SetScript("OnDragStart", function(self)
+    if not layoutPreview then
+        self:StartMoving()
+    end
+end)
 win:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
+    if layoutPreview then
+        return
+    end
     local point, _, relPoint, x, y = self:GetPoint()
     _G[VCA.GLOBAL_DB_NAME].rollWindowPos = {point, relPoint, x, y}
 end)
@@ -445,6 +453,44 @@ timerText:SetShadowOffset(1, -1)
 local timerBg = timerBar:CreateTexture(nil, "BACKGROUND")
 timerBg:SetAllPoints()
 VCA.OnTheme(function() local t = RollPalette().timerBg; timerBg:SetColorTexture(t[1], t[2], t[3], 0.8) end)
+
+-- Pieces used by some of the layouts (see ApplyLayout): the time as a big figure, a ribbon behind the
+-- name, a divider between two columns and a sweep around the item icon.
+local bigTimer = win:CreateFontString(nil, "OVERLAY", "VCAFontNormalHuge")
+bigTimer:Hide()
+local ribbon = win:CreateTexture(nil, "ARTWORK")
+VCA.OnTheme(function() local t = RollPalette().accent; ribbon:SetColorTexture(t[1] * 0.45, t[2] * 0.45, t[3] * 0.45, 1) end)
+ribbon:Hide()
+local colDivider = win:CreateTexture(nil, "ARTWORK")
+colDivider:SetWidth(1)
+VCA.OnTheme(function() local t = RollPalette().border; colDivider:SetColorTexture(t[1], t[2], t[3], 0.5) end)
+colDivider:Hide()
+local ringCooldown = CreateFrame("Cooldown", nil, win, "CooldownFrameTemplate")
+ringCooldown:SetHideCountdownNumbers(true)
+ringCooldown:SetDrawEdge(false)
+ringCooldown:SetSwipeColor(0, 0, 0, 0.65)
+ringCooldown:Hide()
+local lastPreviewElapsed = 0
+
+local function RefreshRing()
+    if not ringCooldown:IsShown() then
+        return
+    end
+    local total, left
+    if isPreview then
+        total = previewTimerDuration
+        left = total - ((GetTime() - (previewTimerStart or GetTime())) % total)
+    else
+        local src = BonusRollFrame and BonusRollFrame.PromptFrame and BonusRollFrame.PromptFrame.Timer
+        if src and src.GetValue then
+            local _, hi = src:GetMinMaxValues()
+            total, left = hi, src:GetValue()
+        end
+    end
+    if total and left and total > 0 then
+        ringCooldown:SetCooldown(GetTime() - (total - left), total)
+    end
+end
 
 -- Separator between timer and spec row
 local topSep = win:CreateTexture(nil, "ARTWORK")
@@ -666,6 +712,9 @@ for i = 1, 4 do
     row.label = row.btn:CreateFontString(nil, "OVERLAY", "VCAFontHighlightSmall")
     row.label:SetJustifyH("LEFT")
     row.label:SetWordWrap(false)
+    row.countBg = row.btn:CreateTexture(nil, "ARTWORK", nil, 2)
+    row.countBg:SetColorTexture(0, 0, 0, 0.5)
+    row.countBg:Hide()
     row.count = row.btn:CreateFontString(nil, "OVERLAY", "VCAFontHighlightSmall")
     row.count:SetJustifyH("RIGHT")
     row.btn:Hide()
@@ -775,6 +824,11 @@ local function CreateSkinnedButton(r, g, b)
         edgeFile = "Interface\\Buttons\\WHITE8X8",
         edgeSize = 1
     })
+    btn.fillAlpha = 1
+    function btn:SetFillAlpha(a)
+        self.fillAlpha = a
+        self:SetBackdropColor(r, g, b, a)
+    end
     btn:SetBackdropColor(r, g, b, 1)
     btn:SetBackdropBorderColor(0, 0, 0, 1)
     btn:SetNormalFontObject("VCAFontNormal")
@@ -788,10 +842,10 @@ local function CreateSkinnedButton(r, g, b)
     hover:SetAllPoints()
     hover:SetColorTexture(1, 1, 1, 0.14)
     btn:SetScript("OnMouseDown", function(self)
-        self:SetBackdropColor(r * 0.7, g * 0.7, b * 0.7, 1)
+        self:SetBackdropColor(r * 0.7, g * 0.7, b * 0.7, self.fillAlpha)
     end)
     btn:SetScript("OnMouseUp", function(self)
-        self:SetBackdropColor(r, g, b, 1)
+        self:SetBackdropColor(r, g, b, self.fillAlpha)
     end)
     return btn
 end
@@ -853,9 +907,14 @@ win:SetScript("OnUpdate", function(_, dt)
     if isPreview then
         if previewTimerStart then
             local elapsed = (GetTime() - previewTimerStart) % previewTimerDuration
+            if elapsed < lastPreviewElapsed then
+                RefreshRing()
+            end
+            lastPreviewElapsed = elapsed
             timerBar:SetMinMaxValues(0, previewTimerDuration)
             timerBar:SetValue(previewTimerDuration - elapsed)
             timerText:SetText(VCA.FormatTimer(previewTimerDuration - elapsed))
+            bigTimer:SetText(VCA.FormatTimer(previewTimerDuration - elapsed))
         end
         return
     end
@@ -871,7 +930,10 @@ win:SetScript("OnUpdate", function(_, dt)
     timerBar:SetMinMaxValues(lo, hi)
     timerBar:SetValue(src:GetValue())
     timerText:SetText(VCA.FormatTimer(src:GetValue()))
+    bigTimer:SetText(VCA.FormatTimer(src:GetValue()))
 end)
+
+local DEFAULT_CHIPS = {x = 16, cols = 2, w = 160, h = 24, gap = 8}
 
 -- Hides per-spec list separator, header and all row widgets.
 local function HideSpecList()
@@ -883,12 +945,13 @@ local function HideSpecList()
         specListRows[i].glow:Hide()
         specListRows[i].label:Hide()
         specListRows[i].count:Hide()
+        specListRows[i].countBg:Hide()
     end
 end
 
 -- Renders per-spec remaining-item icon buttons into the window on a single row.
 -- Returns the updated dynY after the row.
-local function ShowSpecList(source, dynY)
+local function ShowSpecList(source, dynY, geo)
     if not (source and source.sourceType and source.sourceID) then
         HideSpecList()
         return dynY
@@ -903,11 +966,9 @@ local function ShowSpecList(source, dynY)
     specListHitFrame:Hide()
 
     specListSep:Hide()
-    dynY = dynY - 12
-
-    -- Chips in two columns: [icon] Name        N (W)
-    local CHIP_W, CHIP_H, CHIP_GAP = 160, 24, 8
-    local startX = 16
+    -- Chips: [icon] Name        N (W). `c` is the geometry of the layout (see ApplyLayout).
+    local c = (geo and geo.chips) or DEFAULT_CHIPS
+    dynY = dynY - (c.gapTop or 12)
 
     local activeSpecID = VCA.SpecInfo.GetEffectiveLootSpecID()
     local selectedSet = VCA.Data.GetSelectedItems(source.sourceType, source.sourceID, source.difficultyID)
@@ -943,9 +1004,24 @@ local function ShowSpecList(source, dynY)
             end
         end
 
-        local col, rowIdx = (i - 1) % 2, math.floor((i - 1) / 2)
+        local cx, cy
+        if c.pos then
+            cx, cy = c.pos(i, math.min(#specs, 4), dynY)
+        else
+            local col, rowIdx = (i - 1) % c.cols, math.floor((i - 1) / c.cols)
+            cx, cy = c.x + col * (c.w + c.gap), dynY - rowIdx * (c.h + 4)
+        end
+        row.btn:SetSize(c.w, c.h)
         row.btn:ClearAllPoints()
-        row.btn:SetPoint("TOPLEFT", win, "TOPLEFT", startX + col * (CHIP_W + CHIP_GAP), dynY - rowIdx * (CHIP_H + 4))
+        row.btn:SetPoint("TOPLEFT", win, "TOPLEFT", cx, cy)
+        row.icon:ClearAllPoints()
+        if c.iconOnly then
+            row.icon:SetSize(c.h - 6, c.h - 6)
+            row.icon:SetPoint("CENTER", row.btn, "CENTER", 0, 0)
+        else
+            row.icon:SetSize(18, 18)
+            row.icon:SetPoint("LEFT", row.btn, "LEFT", 4, 0)
+        end
         row.icon:SetTexture(spec.icon or 134400)
         row.glow:Hide()
         local a = RollPalette().accent
@@ -959,7 +1035,22 @@ local function ShowSpecList(source, dynY)
         local remColor = remaining > 0 and "|cffffffff" or "|cff666666"
         local wantedStr = wanted > 0 and (" |cffffff00(" .. wanted .. ")|r") or ""
         row.count:ClearAllPoints()
-        row.count:SetPoint("RIGHT", row.btn, "RIGHT", -5, 0)
+        if c.iconOnly then
+            -- Bold figure on a dark patch so it reads over the spec icon.
+            row.count:SetFontObject("VCAFontNormalSmall")
+            row.count:SetShadowColor(0, 0, 0, 1)
+            row.count:SetShadowOffset(1, -1)
+            row.count:SetPoint("BOTTOMRIGHT", row.btn, "BOTTOMRIGHT", -2, 2)
+            row.countBg:ClearAllPoints()
+            row.countBg:SetPoint("TOPLEFT", row.count, "TOPLEFT", -1, 0)
+            row.countBg:SetPoint("BOTTOMRIGHT", row.count, "BOTTOMRIGHT", 1, 0)
+            row.countBg:Show()
+        else
+            row.count:SetFontObject("VCAFontHighlightSmall")
+            row.count:SetShadowOffset(0, 0)
+            row.countBg:Hide()
+            row.count:SetPoint("RIGHT", row.btn, "RIGHT", -5, 0)
+        end
         row.count:SetText(remColor .. remaining .. "|r" .. wantedStr)
         row.label:ClearAllPoints()
         row.label:SetPoint("LEFT", row.icon, "RIGHT", 5, 0)
@@ -1037,7 +1128,7 @@ local function ShowSpecList(source, dynY)
         end)
 
         row.btn:Show()
-        row.label:Show()
+        row.label:SetShown(not c.iconOnly)
         row.count:Show()
     end
 
@@ -1046,26 +1137,26 @@ local function ShowSpecList(source, dynY)
         specListRows[i].btn:Hide()
         specListRows[i].label:Hide()
         specListRows[i].count:Hide()
+        specListRows[i].countBg:Hide()
     end
 
-    local chipRows = math.ceil(math.min(#specs, 4) / 2)
-    dynY = dynY - chipRows * (CHIP_H + 4) -- chips and the gap below them
-    return dynY
+    if c.pos then
+        return dynY - c.h - 4
+    end
+    local chipRows = math.ceil(math.min(#specs, 4) / c.cols)
+    return dynY - chipRows * (c.h + 4) -- chips and the gap below them
 end
 
 -- Lays out, from y downwards: the odds panel, the per-spec chips, the timer and the
 -- one-item warning. Returns the y below the last of them. `source` must carry
--- { sourceType, sourceID, difficultyID } or be nil.
--- Where the section below the header starts.  The header is the icon (40) or, when the item name
--- takes two lines, the name plus the cost line, so nothing ever overlaps.
-local function HeaderBottomY()
-    local nameH = winItemName:GetStringHeight() or 14
-    local subH = winItemSub:GetStringHeight() or 0
-    local infoH = winVoidcoreInfo:GetStringHeight() or 14
-    return -(14 + math.max(40, 2 + nameH + 1 + subH + 3 + infoH) + 12)
-end
-
-local function LayoutDynamicSection(source, specID, y)
+-- { sourceType, sourceID, difficultyID } or be nil. `geo` (see ApplyLayout) says where things go:
+-- width, padL/padR (horizontal extent), centerX, oddsIconX, odds=false, chips (see ShowSpecList) or
+-- false, timer=false / timerH, warn=false.
+local function LayoutDynamicSection(source, specID, y, geo)
+    geo = geo or {}
+    local padL, padR = geo.padL or 16, geo.padR or 16
+    local panelW = (geo.width or 360) - padL - padR
+    local iconX = geo.oddsIconX or 150
     topSep:Hide()
     specName:Hide()
     specName:SetText("")
@@ -1076,13 +1167,19 @@ local function LayoutDynamicSection(source, specID, y)
     chanceText:Hide()
     warnHeader:Hide()
     warnBody:Hide()
+    warnHeader:SetWidth(math.min(320, panelW))
+    warnBody:SetWidth(math.min(320, panelW))
     oddsPct:SetText("")
     oddsCaption:SetText("")
     oddsMessage:SetText("")
     chosenText:SetText("")
     for i = 1, 5 do
         chosenIcons[i]:Hide()
+        chosenIcons[i]:ClearAllPoints()
+        chosenIcons[i]:SetPoint("TOPLEFT", oddsPanel, "TOPLEFT", iconX + (i - 1) * 28, -9)
     end
+    chosenText:ClearAllPoints()
+    chosenText:SetPoint("TOPLEFT", oddsPanel, "TOPLEFT", iconX, -39)
     oneItemLeft = false
 
     local hasSource = source and source.sourceType and source.sourceID
@@ -1093,6 +1190,7 @@ local function LayoutDynamicSection(source, specID, y)
         local hasSelection = selectedSet and next(selectedSet)
         local probFull = VCA.Probability.CalculateForSpec(source.sourceType, source.sourceID, source.difficultyID,
             VCA.SpecInfo.GetPlayerClassID(), specID, nil)
+        local maxIcons = math.max(0, math.floor((panelW - iconX - 8) / 28))
 
         local panelH = 36
         local message
@@ -1126,7 +1224,7 @@ local function LayoutDynamicSection(source, specID, y)
                     end
                 end
                 table.sort(wantedIDs)
-                for i = 1, math.min(5, #wantedIDs) do
+                for i = 1, math.min(5, #wantedIDs, maxIcons) do
                     chosenIcons[i]:SetTexture(C_Item.GetItemIconByID(wantedIDs[i]) or 134400)
                     chosenIcons[i]:Show()
                 end
@@ -1135,16 +1233,21 @@ local function LayoutDynamicSection(source, specID, y)
             end
         end
         oddsMessage:SetText(message or "")
-        oddsPanel:ClearAllPoints()
-        oddsPanel:SetPoint("TOPLEFT", win, "TOPLEFT", 16, y)
-        oddsPanel:SetPoint("TOPRIGHT", win, "TOPRIGHT", -16, y)
-        oddsPanel:SetHeight(panelH)
-        oddsPanel:Show()
-        y = y - panelH - 2
+        if geo.odds == false then
+            oddsPanel:Hide()
+            chanceHitFrame:Hide()
+        else
+            oddsPanel:ClearAllPoints()
+            oddsPanel:SetPoint("TOPLEFT", win, "TOPLEFT", padL, y)
+            oddsPanel:SetPoint("TOPRIGHT", win, "TOPRIGHT", -padR, y)
+            oddsPanel:SetHeight(panelH)
+            oddsPanel:Show()
+            y = y - panelH - 2
+        end
 
         -- Per-spec chips (clicking one switches your loot specialization)
-        if IsSpecListEnabled() then
-            y = ShowSpecList(source, y)
+        if IsSpecListEnabled() and geo.chips ~= false then
+            y = ShowSpecList(source, y, geo)
         else
             HideSpecList()
         end
@@ -1158,30 +1261,327 @@ local function LayoutDynamicSection(source, specID, y)
     end
 
     -- Timer bar
-    y = y - 8
-    timerBar:ClearAllPoints()
-    timerBar:SetPoint("TOPLEFT", win, "TOPLEFT", 16, y)
-    timerBar:SetPoint("TOPRIGHT", win, "TOPRIGHT", -16, y)
-    y = y - 14
+    if geo.timer ~= false then
+        local th = geo.timerH or 14
+        y = y - 8
+        timerBar:ClearAllPoints()
+        timerBar:SetPoint("TOPLEFT", win, "TOPLEFT", padL, y)
+        timerBar:SetPoint("TOPRIGHT", win, "TOPRIGHT", -padR, y)
+        timerBar:SetHeight(th)
+        y = y - th
+    end
 
     -- One-item warning, just above the buttons
     if oneItemLeft then
         if PlaySound and SOUNDKIT and SOUNDKIT.RAID_WARNING then
             PlaySound(SOUNDKIT.RAID_WARNING)
         end
-        y = y - 10
-        warnHeader:ClearAllPoints()
-        warnHeader:SetPoint("TOP", win, "TOP", 0, y)
-        warnHeader:SetText(L["BONUS_ROLL_CONFIRM_WARNING_HEADER"])
-        warnHeader:Show()
-        y = y - 20
-        warnBody:ClearAllPoints()
-        warnBody:SetPoint("TOP", win, "TOP", 0, y)
-        warnBody:SetText("|cffff6060" .. L["ONE_ITEM_WARN"] .. "|r")
-        warnBody:Show()
-        y = y - 18 - 4
+        if geo.warn ~= false then
+            local cx = geo.centerX or ((geo.width or 360) / 2)
+            y = y - 10
+            warnHeader:ClearAllPoints()
+            warnHeader:SetPoint("TOP", win, "TOPLEFT", cx, y)
+            warnHeader:SetText(L["BONUS_ROLL_CONFIRM_WARNING_HEADER"])
+            warnHeader:Show()
+            y = y - 20
+            warnBody:ClearAllPoints()
+            warnBody:SetPoint("TOP", win, "TOPLEFT", cx, y)
+            warnBody:SetText("|cffff6060" .. L["ONE_ITEM_WARN"] .. "|r")
+            warnBody:Show()
+            y = y - 18 - 4
+        end
     end
     return y
+end
+
+-- ── Window layouts ───────────────────────────────────────────────────────────
+-- Ten ways to arrange the same information; the player picks one in the settings (rollLayout).
+local LAYOUT_COUNT = 10
+BRC.LAYOUT_COUNT = LAYOUT_COUNT
+
+local function GetLayoutID()
+    local gdb = _G[VCA.GLOBAL_DB_NAME]
+    local n = gdb and tonumber(gdb.rollLayout) or 1
+    if n < 1 or n > LAYOUT_COUNT then
+        n = 1
+    end
+    return math.floor(n)
+end
+BRC.GetLayoutID = GetLayoutID
+
+
+local function At(w, point, rel, relPoint, x, y)
+    w:ClearAllPoints()
+    w:SetPoint(point, rel, relPoint, x, y)
+end
+
+-- Item icon, name, second line and cost line. Centered stacks the texts under the icon.
+local function SetHeader(size, point, relPoint, x, y, textW, centered)
+    winItemIcon:SetSize(size, size)
+    At(winItemIcon, point, win, relPoint, x, y)
+    local justify = centered and "CENTER" or "LEFT"
+    winItemName:SetWidth(textW)
+    winItemName:SetJustifyH(justify)
+    winItemName:SetWordWrap(false)
+    winItemSub:SetWidth(textW)
+    winItemSub:SetJustifyH(justify)
+    winItemSub:SetWordWrap(true)
+    if centered then
+        At(winItemName, "TOP", winItemIcon, "BOTTOM", 0, -6)
+        At(winItemSub, "TOP", winItemName, "BOTTOM", 0, -1)
+        At(winVoidcoreInfo, "TOP", winItemSub, "BOTTOM", 0, -3)
+    else
+        At(winItemName, "TOPLEFT", winItemIcon, "TOPRIGHT", 8, -2)
+        At(winItemSub, "TOPLEFT", winItemName, "BOTTOMLEFT", 0, -1)
+        At(winVoidcoreInfo, "TOPLEFT", winItemSub, "BOTTOMLEFT", 0, -3)
+    end
+end
+
+local function TextHeights()
+    return winItemName:GetStringHeight() or 14, winItemSub:GetStringHeight() or 0,
+        winVoidcoreInfo:GetStringHeight() or 14
+end
+
+-- y where the first section below a header starting `top` pixels down begins.
+local function HeaderBottom(top, size, centered, gap)
+    local n, s, i = TextHeights()
+    local h = centered and (size + 6 + n + 1 + s + 3 + i) or math.max(size, 2 + n + 1 + s + 3 + i)
+    return -(top + h + gap)
+end
+
+local function PlaceButton(btn, point, relPoint, x, y, w, h)
+    btn:SetSize(w, h)
+    At(btn, point, win, relPoint, x, y)
+end
+
+local function ButtonPair(top, x, w, h, gap)
+    PlaceButton(rollBtn, "TOPLEFT", "TOPLEFT", x, top, w, h)
+    PlaceButton(passBtn, "TOPLEFT", "TOPLEFT", x + w + gap, top, w, h)
+end
+
+-- Chips placed on one centered row.
+local function CenteredRow(width, w, gap)
+    return function(i, n, y)
+        return (width - (n * w + (n - 1) * gap)) / 2 + (i - 1) * (w + gap), y
+    end
+end
+
+local function ApplyLayout(source, specID)
+    local id = GetLayoutID()
+    bigTimer:Hide()
+    ribbon:Hide()
+    colDivider:Hide()
+    ringCooldown:Hide()
+    timerBar:SetHeight(14)
+    timerBar:Show()
+    timerText:Show()
+    specCornerIcon:SetShown(id == 1)
+    specCornerBtn:SetShown(id == 1)
+    rollBtn:SetNormalFontObject("VCAFontNormal")
+    passBtn:SetNormalFontObject("VCAFontNormal")
+    rollBtn:SetFillAlpha(1)
+    passBtn:SetFillAlpha(1)
+    rollBtn:SetText(ROLL_BTN_TEXT)
+    passBtn:SetText(PASS_BTN_TEXT)
+    bigTimer:SetText("0:30")
+
+    local W, H, y
+    if id == 1 then
+        -- Classic: header, odds, chips, timer, buttons stacked.
+        SetHeader(40, "TOPLEFT", "TOPLEFT", 16, -14, 238, false)
+        y = LayoutDynamicSection(source, specID, HeaderBottom(14, 40, false, 12), {})
+        W, H = 360, math.abs(y) + 8 + 28 + 16
+        PlaceButton(rollBtn, "BOTTOM", "BOTTOM", -(140 / 2 + 4), 12, 140, 28)
+        PlaceButton(passBtn, "BOTTOM", "BOTTOM", 140 / 2 + 4, 12, 140, 28)
+    elseif id == 2 then
+        -- Wide: buttons in a column on the right of the header, chips in one row.
+        SetHeader(56, "TOPLEFT", "TOPLEFT", 14, -12, 270, false)
+        PlaceButton(rollBtn, "TOPRIGHT", "TOPRIGHT", -14, -12, 150, 30)
+        PlaceButton(passBtn, "TOPRIGHT", "TOPRIGHT", -14, -48, 150, 30)
+        y = LayoutDynamicSection(source, specID, HeaderBottom(12, 56, false, 12),
+            {width = 520, padL = 14, padR = 14, chips = {x = 14, cols = 4, w = 117, h = 24, gap = 8}})
+        W, H = 520, math.abs(y) + 10
+    elseif id == 3 then
+        -- Tall card: everything in one narrow column.
+        SetHeader(56, "TOP", "TOP", 0, -14, 200, true)
+        y = LayoutDynamicSection(source, specID, HeaderBottom(14, 56, true, 10), {
+            width = 230,
+            padL = 12,
+            padR = 12,
+            centerX = 115,
+            oddsIconX = 92,
+            chips = {x = 12, cols = 1, w = 206, h = 24, gap = 0}
+        })
+        PlaceButton(rollBtn, "TOPLEFT", "TOPLEFT", 12, y - 8, 206, 30)
+        PlaceButton(passBtn, "TOPLEFT", "TOPLEFT", 12, y - 44, 206, 30)
+        W, H = 230, math.abs(y) + 8 + 30 + 6 + 30 + 14
+    elseif id == 4 then
+        -- Compact bar: one thin row; specs as icons, buttons with the Voidcore icon and a cross.
+        SetHeader(40, "TOPLEFT", "TOPLEFT", 10, -12, 200, false)
+        -- Tall enough for the three text lines plus the timer line at the bottom.
+        local n, s, i = TextHeights()
+        H = 12 + math.max(40, 2 + n + 1 + s + 3 + i) + 14
+        local chipY = -(H - 5 - 34) / 2
+        LayoutDynamicSection(source, specID, -H, {
+            width = 560,
+            odds = false,
+            timer = false,
+            warn = false,
+            chips = {
+                iconOnly = true,
+                w = 34,
+                h = 34,
+                gapTop = 0,
+                pos = function(k)
+                    return 270 + (k - 1) * 40, chipY
+                end
+            }
+        })
+        PlaceButton(rollBtn, "TOPLEFT", "TOPLEFT", 440, -(H - 5 - 32) / 2, 52, 32)
+        PlaceButton(passBtn, "TOPLEFT", "TOPLEFT", 498, -(H - 5 - 32) / 2, 52, 32)
+        -- Too narrow for the words: the roll and pass icons alone.
+        rollBtn:SetText(CreateAtlasMarkup("lootroll-icon-need", 18, 18))
+        passBtn:SetText(CreateAtlasMarkup("lootroll-icon-pass", 18, 18))
+        timerBar:ClearAllPoints()
+        timerBar:SetPoint("BOTTOMLEFT", win, "BOTTOMLEFT", 4, 4)
+        timerBar:SetPoint("BOTTOMRIGHT", win, "BOTTOMRIGHT", -4, 4)
+        timerBar:SetHeight(5)
+        timerText:Hide()
+        W = 560
+    elseif id == 5 then
+        -- List: the specs as rows, the time in a big figure.
+        SetHeader(36, "TOPLEFT", "TOPLEFT", 14, -12, 230, false)
+        At(bigTimer, "TOPRIGHT", win, "TOPRIGHT", -14, -14)
+        bigTimer:Show()
+        y = LayoutDynamicSection(source, specID, HeaderBottom(12, 36, false, 10), {
+            width = 400,
+            padL = 14,
+            padR = 14,
+            timer = false,
+            chips = {x = 14, cols = 1, w = 372, h = 26, gap = 0, gapTop = 6}
+        })
+        timerBar:Hide()
+        ButtonPair(y - 8, 14, 183, 28, 8)
+        W, H = 400, math.abs(y) + 8 + 28 + 14
+    elseif id == 6 then
+        -- Ring: the time sweeps around the item icon.
+        SetHeader(76, "TOP", "TOP", 0, -18, 260, true)
+        At(bigTimer, "TOP", winItemIcon, "BOTTOM", 0, -4)
+        bigTimer:Show()
+        At(winItemName, "TOP", bigTimer, "BOTTOM", 0, -4)
+        ringCooldown:ClearAllPoints()
+        ringCooldown:SetAllPoints(winItemIcon)
+        ringCooldown:Show()
+        local n, s, i = TextHeights()
+        local top = 18 + 76 + 4 + (bigTimer:GetStringHeight() or 24) + 4 + n + 1 + s + 3 + i + 12
+        y = LayoutDynamicSection(source, specID, -top, {
+            width = 300,
+            padL = 14,
+            padR = 14,
+            centerX = 150,
+            oddsIconX = 100,
+            timer = false,
+            chips = {iconOnly = true, w = 36, h = 36, gapTop = 10, pos = CenteredRow(300, 36, 8)}
+        })
+        timerBar:Hide()
+        ButtonPair(y - 6, 14, 130, 30, 12)
+        W, H = 300, math.abs(y) + 6 + 30 + 14
+        RefreshRing()
+    elseif id == 7 then
+        -- Banner: a ribbon with the name and big square stamps at the sides.
+        ribbon:ClearAllPoints()
+        ribbon:SetPoint("TOPLEFT", win, "TOPLEFT", 3, -3)
+        ribbon:SetPoint("TOPRIGHT", win, "TOPRIGHT", -3, -3)
+        ribbon:SetHeight(30)
+        ribbon:Show()
+        winItemName:SetWidth(340)
+        winItemName:SetJustifyH("CENTER")
+        winItemName:SetWordWrap(false)
+        At(winItemName, "TOP", win, "TOP", 0, -10)
+        winItemIcon:SetSize(50, 50)
+        At(winItemIcon, "TOP", win, "TOP", 0, -44)
+        winItemSub:SetWidth(160)
+        winItemSub:SetJustifyH("CENTER")
+        winItemSub:SetWordWrap(true)
+        At(winItemSub, "TOP", winItemIcon, "BOTTOM", 0, -4)
+        At(winVoidcoreInfo, "TOP", winItemSub, "BOTTOM", 0, -3)
+        local _, s, i = TextHeights()
+        PlaceButton(rollBtn, "TOPLEFT", "TOPLEFT", 14, -44, 92, 64)
+        PlaceButton(passBtn, "TOPRIGHT", "TOPRIGHT", -14, -44, 92, 64)
+        y = LayoutDynamicSection(source, specID, -(44 + math.max(64, 50 + 4 + s + 3 + i) + 12), {
+            width = 380,
+            padL = 14,
+            padR = 14,
+            centerX = 190,
+            oddsIconX = 130,
+            chips = {iconOnly = true, w = 32, h = 32, gapTop = 8, pos = CenteredRow(380, 32, 8)}
+        })
+        W, H = 380, math.abs(y) + 10
+    elseif id == 8 then
+        -- Two columns: the item and the time on the left, the specs and buttons on the right.
+        SetHeader(52, "TOP", "TOPLEFT", 85, -14, 150, true)
+        At(bigTimer, "TOP", winVoidcoreInfo, "BOTTOM", 0, -8)
+        bigTimer:Show()
+        colDivider:ClearAllPoints()
+        colDivider:SetPoint("TOPLEFT", win, "TOPLEFT", 170, -3)
+        colDivider:SetPoint("BOTTOMLEFT", win, "BOTTOMLEFT", 170, 3)
+        colDivider:Show()
+        y = LayoutDynamicSection(source, specID, -14, {
+            width = 520,
+            padL = 184,
+            padR = 14,
+            centerX = 345,
+            timer = false,
+            chips = {x = 184, cols = 1, w = 322, h = 24, gap = 0, gapTop = 6}
+        })
+        ButtonPair(y - 8, 184, 157, 28, 8)
+        local n, s, i = TextHeights()
+        local leftH = 14 + 52 + 6 + n + 1 + s + 3 + i + 8 + (bigTimer:GetStringHeight() or 24) + 10 + 12 + 14
+        W, H = 520, math.max(math.abs(y) + 8 + 28 + 14, leftH)
+        timerBar:ClearAllPoints()
+        timerBar:SetPoint("BOTTOMLEFT", win, "BOTTOMLEFT", 14, 14)
+        timerBar:SetPoint("BOTTOMRIGHT", win, "BOTTOMLEFT", 156, 14)
+        timerBar:SetHeight(12)
+        timerText:Hide()
+    elseif id == 9 then
+        -- Minimal: header, a thin timer and the buttons.
+        SetHeader(38, "TOPLEFT", "TOPLEFT", 12, -10, 290, false)
+        At(winVoidcoreInfo, "TOPLEFT", winItemName, "BOTTOMLEFT", 0, -1)
+        winItemSub:SetWordWrap(false)
+        winItemSub:SetWidth(0)
+        At(winItemSub, "LEFT", winVoidcoreInfo, "RIGHT", 8, 0)
+        local n, _, i = TextHeights()
+        y = LayoutDynamicSection(source, specID, -(10 + math.max(38, n + 1 + i) + 8),
+            {width = 360, padL = 12, padR = 12, odds = false, chips = false, timerH = 10})
+        timerText:Hide()
+        ButtonPair(y - 8, 12, 168, 26, 8)
+        W, H = 360, math.abs(y) + 8 + 26 + 12
+    else
+        -- Big button: Roll is a wide button that fills up with the time; Pass is a small link.
+        SetHeader(40, "TOPLEFT", "TOPLEFT", 14, -12, 270, false)
+        y = LayoutDynamicSection(source, specID, HeaderBottom(12, 40, false, 8), {
+            width = 340,
+            padL = 14,
+            padR = 14,
+            odds = false,
+            timer = false,
+            chips = {iconOnly = true, x = 14, cols = 6, w = 44, h = 28, gap = 6, gapTop = 0}
+        })
+        timerBar:ClearAllPoints()
+        timerBar:SetPoint("TOPLEFT", win, "TOPLEFT", 14, y - 6)
+        timerBar:SetPoint("TOPRIGHT", win, "TOPRIGHT", -14, y - 6)
+        timerBar:SetHeight(56)
+        timerText:Hide()
+        PlaceButton(rollBtn, "TOPLEFT", "TOPLEFT", 14, y - 6, 312, 56)
+        rollBtn:SetFillAlpha(0)
+        rollBtn:SetNormalFontObject("VCAFontNormalLarge")
+        At(bigTimer, "RIGHT", rollBtn, "RIGHT", -12, 0)
+        bigTimer:Show()
+        PlaceButton(passBtn, "TOP", "TOP", 0, y - 6 - 56 - 6, 100, 20)
+        passBtn:SetFillAlpha(0)
+        W, H = 340, math.abs(y) + 6 + 56 + 6 + 20 + 12
+    end
+    win:SetSize(W, H)
 end
 
 -- â”€â”€ BRC.Show â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1278,17 +1678,7 @@ function BRC.Show()
                          VCA.VoidcoreCost.MYTHIC_PLUS)
     winVoidcoreInfo:SetText(string.format(L["BONUS_ROLL_CONFIRM_COST"], cost, owned))
 
-    local dynY = LayoutDynamicSection(source, specID, HeaderBottomY())
-    local btnW, btnH = 140, 28
-    local winH = math.abs(dynY) + 8 + btnH + 16
-    win:SetSize(360, winH)
-
-    rollBtn:SetSize(btnW, btnH)
-    passBtn:SetSize(btnW, btnH)
-    rollBtn:ClearAllPoints()
-    passBtn:ClearAllPoints()
-    rollBtn:SetPoint("BOTTOM", win, "BOTTOM", -(btnW / 2 + 4), 12)
-    passBtn:SetPoint("BOTTOM", win, "BOTTOM", (btnW / 2 + 4), 12)
+    ApplyLayout(source, specID)
 
     PlaceWindow(BonusRollFrame, 0, 0)
     win:SetFrameStrata(BonusRollFrame:GetFrameStrata())
@@ -1314,6 +1704,7 @@ function BRC.Show()
         BonusRollFrame.CurrentCountFrame:EnableMouseMotion(false)
     end
     isPreview = false
+    layoutPreview = false
     win:Show()
 end
 
@@ -1402,8 +1793,11 @@ local PREVIEW_PROMPT_DATA = {
     treasureContextLevel = 10
 }
 
-function BRC.ShowPreview()
+-- forLayout: the sample is for trying layouts; it is neither placed at nor saves the window position.
+-- keepPosition: only redraw (a layout changed), leave the window where it is.
+function BRC.ShowPreview(forLayout, keepPosition)
     isPreview = true
+    layoutPreview = forLayout and true or false
     previewTimerStart = GetTime()
     cachedPromptData = PREVIEW_PROMPT_DATA
     cachedDisplayItemID = cachedPromptData.displayItemID
@@ -1449,20 +1843,36 @@ function BRC.ShowPreview()
                          VCA.VoidcoreCost.MYTHIC_PLUS)
     winVoidcoreInfo:SetText(string.format(L["BONUS_ROLL_CONFIRM_COST"], cost, owned))
 
-    local dynY = LayoutDynamicSection(source, specID, HeaderBottomY())
-    local btnW, btnH = 140, 28
-    local winH = math.abs(dynY) + 8 + btnH + 16
-    win:SetSize(360, winH)
+    ApplyLayout(source, specID)
 
-    rollBtn:SetSize(btnW, btnH)
-    passBtn:SetSize(btnW, btnH)
-    rollBtn:ClearAllPoints()
-    passBtn:ClearAllPoints()
-    rollBtn:SetPoint("BOTTOM", win, "BOTTOM", -(btnW / 2 + 4), 12)
-    passBtn:SetPoint("BOTTOM", win, "BOTTOM", (btnW / 2 + 4), 12)
-
-    PlaceWindow(UIParent, 0, 100)
+    if not keepPosition then
+        PlaceWindow(UIParent, 0, 100)
+    end
+    win:SetFrameStrata("FULLSCREEN_DIALOG") -- above the settings window it is opened from
     win:Show()
+end
+
+-- "Save" in the settings: the position is saved when the window is dropped; this closes the sample.
+function BRC.ClosePreview()
+    if isPreview and win:IsShown() then
+        BRC.Hide()
+    end
+end
+
+-- True while the sample opened with the Preview button of the layout row is on screen.
+function BRC.IsLayoutPreview()
+    return layoutPreview and isPreview and win:IsShown()
+end
+
+-- Redraws an open sample (after the layout changed) without moving it.
+function BRC.RefreshPreview()
+    if isPreview and win:IsShown() then
+        BRC.ShowPreview(layoutPreview, true)
+    end
+end
+
+function BRC.HasSavedPosition()
+    return _G[VCA.GLOBAL_DB_NAME].rollWindowPos ~= nil
 end
 
 -- Back to the default spot (over the Blizzard bonus roll frame).
@@ -1527,7 +1937,7 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
     elseif event == "PLAYER_LOOT_SPEC_UPDATED" then
         if win:IsShown() then
             if isPreview then
-                BRC.ShowPreview()
+                BRC.ShowPreview(layoutPreview, true)
             else
                 BRC.Show()
             end

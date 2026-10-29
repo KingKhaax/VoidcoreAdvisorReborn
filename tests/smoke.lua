@@ -406,6 +406,26 @@ check("Bonus roll window preview lays out", function()
     VCARollWindow:Hide()
 end)
 
+check("Bonus roll window preview lays out in every layout", function()
+    for id = 1, VCA.BonusRollConfirm.LAYOUT_COUNT do
+        _G.VoidcoreAdvisorDB.rollLayout = id
+        assert(VCA.BonusRollConfirm.GetLayoutID() == id)
+        VCA.BonusRollConfirm.ShowPreview()
+    end
+    _G.VoidcoreAdvisorDB.rollLayout = 1
+    VCARollWindow:Hide()
+end)
+
+check("Settings window follows its own theme", function()
+    for _, theme in ipairs({"green", "current", "fire"}) do
+        _G.VoidcoreAdvisorDB.settingsTheme = theme
+        VCA.ApplyTheme(_G.VoidcoreAdvisorDB.theme)
+    end
+    _G.VoidcoreAdvisorDB.settingsTheme = "green"
+    VCA.SettingsWindow.Open(1)
+    VCA.SettingsWindow.Hide()
+end)
+
 check("Fonts: list, choose and restore", function()
     local list = VCA.Fonts.List()
     assert(#list >= 5 and list[1] == "Source Sans 3")

@@ -1,3 +1,17 @@
+Version: 2.11.0
+2026/10/29 Released
+
+🔮 New
+- [Roll window] Ten layouts for the bonus roll window: classic, wide, tall card, compact bar, spec list, ring, banner, two columns, minimal and big button. They all show the same information arranged differently. Pick one in the settings (bonus roll tab); the new Preview button there opens a sample beside the settings and it changes live as you switch layout, and pressing it again closes it.
+- [Settings] The settings window has its own color theme, in the General tab right above the color theme of the other windows. It uses the same 22 themes (and "My current theme"), and is green by default.
+
+💪 Improvement
+- [Roll window] The position of the roll window and its layout are independent. Move window opens the sample where you left it (beside the settings the first time) and you drag it from there; a new Save button, only visible while you move it, closes the sample. Trying a layout never changes the saved position, and moving never changes the layout.
+- [Settings] The theme selectors and the new layout selector are one dropdown button (swatch, name and a "v") with an arrow on each side: the arrows go one by one, the button opens the whole list. The font selector is as wide as they are.
+- [Roll window] The spec numbers over the icons (compact bar, ring, banner and big button layouts) are bold and sit on a dark patch, so they can be read.
+
+---
+
 Version: 2.10.0
 2026/10/29 Released
 

@@ -1,6 +1,15 @@
 [
   {
     "date": "2026-10-29",
+    "version": "2.11.0",
+    "notes": [
+      "Nuevo: diez diseños para la ventana de tirada extra con botón de Vista previa en tiempo real.",
+      "Nuevo: la ventana de ajustes tiene su propio tema de color, encima del tema de color general.",
+      "Mejorado: posición y diseño de la ventana de tirada son independientes; botón Guardar; números de las especializaciones en negrita."
+    ]
+  },
+  {
+    "date": "2026-10-29",
     "version": "2.10.0",
     "notes": [
       "Nuevo: la ventana de tirada se puede mover (arrastrar; opciones Mover ventana y Restablecer en la pestaña Tirada extra).",
