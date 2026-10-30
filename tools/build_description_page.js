@@ -19,6 +19,11 @@ const toc = fs.readFileSync(path.join(ROOT, 'VoidcoreAdvisorReborn.toc'), 'utf8'
 const version = (toc.match(/^## Version:\s*(.+)$/m) || [])[1] || '?';
 const summary = fs.existsSync(path.join(DESK, 'resumen.txt')) ? fs.readFileSync(path.join(DESK, 'resumen.txt'), 'utf8').trim() : '';
 
+// Every image the description points at must exist in docs/screenshots (and be pushed to GitHub).
+const missing = description.split(RAW).slice(1).map(p => p.split('"')[0])
+  .filter(f => !fs.existsSync(path.join(ROOT, 'docs', 'screenshots', f)));
+if (missing.length) { console.error('MISSING IMAGES referenced in the description: ' + missing.join(', ')); process.exitCode = 1; }
+
 fs.mkdirSync(path.join(OUT, 'img'), { recursive: true });
 const shots = fs.readdirSync(path.join(ROOT, 'docs', 'screenshots')).filter(f => /\.(png|jpg)$/i.test(f));
 for (const f of shots) fs.copyFileSync(path.join(ROOT, 'docs', 'screenshots', f), path.join(OUT, 'img', f));

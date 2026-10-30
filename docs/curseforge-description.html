@@ -10,6 +10,10 @@
 
 <h2>What's new in Reborn</h2>
 <ul>
+<li>The item in the chat message of an automatic detection can be clicked: it shows the tooltip of the item you own (bags, then equipped) with its real item level, or the normal tooltip if you no longer have it.</li>
+<li><strong>Ten layouts for the bonus roll window:</strong> classic, wide, tall card, compact bar, spec list, ring, banner, two columns, minimal and big button. They show the same information arranged differently; pick one in the settings (Bonus Roll tab), where a <strong>Preview</strong> button opens a sample that changes live as you switch layout.</li>
+<li><strong>Move the bonus roll window</strong> wherever you like: drag it, or use Move window, Save and Reset in the settings. The position and the layout are independent: changing the layout never moves the window.</li>
+<li><strong>The settings window has its own color theme</strong> (General tab, right above the color theme of the other windows), with the same 22 themes. The theme and layout selectors now have an arrow on each side to go one by one and a button in the middle that opens the whole list.</li>
 <li><strong>The panel sticks to the Adventure Guide.</strong> The panel, the raid overview and the dungeon overview stay attached to the guide and follow it. A <strong>pin button next to the X</strong> lets go of them (drag a window by its title row, or press the pin) or sticks them back; <code>/void resetpanel</code> pins them again.</li>
 <li><strong>Rolls mark only the specialization you rolled with.</strong> A Voidcore roll no longer marks the item for every specialization that can get it.</li>
 <li><code>/void scan owned</code> marks the pool items you have equipped or in your bags, for your current loot specialization. It is for items you bought with Voidcores before the addon saw the roll.</li>
@@ -56,6 +60,10 @@
 
 <h2>Bonus roll window</h2>
 <p>When a Nebulous Voidcore prompt appears, Reborn replaces the default prompt with a window that shows the item, where the roll comes from (the boss and its difficulty, or Mythic +level, colored like log parses), your Voidcore count, the cost of the roll, the wanted items you still need, your specializations as chips with the number of items left (click one to switch your loot spec) and a live timer. The green Roll button and the red Pass button can ask "Are you sure?" before acting (optional, on by default), so you cannot spend a Voidcore by accident. A red warning and a sound alert you when only 1 item is left for your spec. You can preview the window without spending anything with the Preview button next to the roll window theme in the options. You can also drag the window to wherever you want it to appear (the position is saved; Move window, Save and Reset in the Bonus Roll tab of the settings), and choose among ten layouts (classic, wide, tall card, compact bar, spec list, ring, banner, two columns, minimal and big button) with a live Preview button.</p>
+<ul>
+<li><strong>Layouts:</strong> classic, wide, tall card, compact bar, spec list, ring, banner, two columns, minimal and big button. The Preview button next to the layout selector opens a sample beside the settings and updates it as you change layout; press it again to close it.</li>
+<li><strong>Position:</strong> Move window opens the sample where you left the window and you drag it from there; Save closes the sample, and Reset sends the window back to its default spot. Trying layouts never changes the saved position.</li>
+</ul>
 <p><img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/roll-window.png" alt="Bonus roll window" width="357"></p>
 
 <h2>Automatic Voidcache loot scanning</h2>
@@ -72,7 +80,7 @@
 <p><img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/reminder-popup.png" alt="Loot spec recommendation popup" width="434"></p>
 
 <h2>Options, themes and commands</h2>
-<p>The settings window (type <code>/void open</code>, or press the button of the addon in Game Menu &gt; Options &gt; AddOns) lets you choose the color theme of the panel, of the bonus roll window and of the reminder popup (a drop-down with every theme and a Preview button), the font and the text size, and toggle the bonus roll window, the confirmation step, the recommendation popup (also in front of raid bosses), the cumulative odds line and the per-spec item lists.</p>
+<p>The settings window (type <code>/void open</code>, or press the button of the addon in Game Menu &gt; Options &gt; AddOns) lets you choose the color theme of the settings window itself, of the panel, of the bonus roll window and of the reminder popup (a selector with arrows and a drop-down list with every theme, and a Preview button), the layout of the bonus roll window, the font and the text size, and toggle the bonus roll window, the confirmation step, the recommendation popup (also in front of raid bosses), the cumulative odds line and the per-spec item lists.</p>
 <p><img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/settings-general-v3.png" alt="Settings window, General tab" width="400"> <img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/settings-reminder-v3.png" alt="Settings window, Loot Spec Reminder tab" width="400"></p>
 <p><img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/settings-roll-v3.png" alt="Settings window, Bonus Roll tab" width="400"> <img src="https://raw.githubusercontent.com/KingKhaax/VoidcoreAdvisorReborn/master/docs/screenshots/settings-tools-v3.png" alt="Settings window, Tools tab" width="400"></p>
 <ul>

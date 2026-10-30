@@ -1,3 +1,11 @@
+Version: 2.11.1
+2026/10/30 Released
+
+💪 Improvement
+- [Detection] The item in the "detected automatically as obtained" chat message is now clickable. Clicking it shows the tooltip of the item you own, with its real item level and bonuses (looked up in your bags, then in what you have equipped; the one with the item level of the message if you have several). If you no longer have it (sold or thrown away) it shows the normal tooltip of the item.
+
+---
+
 Version: 2.11.0
 2026/10/29 Released
 

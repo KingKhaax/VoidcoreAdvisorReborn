@@ -1,5 +1,12 @@
 [
   {
+    "date": "2026-10-30",
+    "version": "2.11.1",
+    "notes": [
+      "Mejorado: el objeto del mensaje de detección automática se puede pulsar y muestra el tooltip del objeto que tienes (bolsas, luego equipado) o el normal si ya no lo tienes."
+    ]
+  },
+  {
     "date": "2026-10-29",
     "version": "2.11.0",
     "notes": [

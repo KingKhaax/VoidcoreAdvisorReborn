@@ -1,6 +1,22 @@
 {
-  "roll-window.png": {"status": "old", "note": "Muestra la ventana de tirada antigua. Falta una captura con el diseño nuevo (origen coloreado y fichas de especialización)."},
-  "settings-general-v3.png": {"status": "old", "note": "Falta el control de tamaño del texto en la pestaña General."},
-  "settings-tools-v3.png": {"status": "old", "note": "Los cuadros de comandos son ahora más altos."},
-  "journal-panel-v3.png": {"status": "ok", "note": "El panel ahora lleva la chincheta junto a la X; sirve hasta que haya una captura nueva."}
+  "roll-window.png": {
+    "status": "old",
+    "note": "Muestra el diseño Clásico antiguo. Falta una captura del diseño actual y, mejor, una de otros diseños (barra compacta, anillo, dos columnas)."
+  },
+  "settings-general-v3.png": {
+    "status": "old",
+    "note": "Falta el selector del tema de la ventana de ajustes, el control de tamaño del texto y el nuevo aspecto de los selectores (flechas y lista)."
+  },
+  "settings-tools-v3.png": {
+    "status": "old",
+    "note": "Los cuadros de comandos son ahora más altos."
+  },
+  "journal-panel-v3.png": {
+    "status": "ok",
+    "note": "El panel ahora lleva la chincheta junto a la X; sirve hasta que haya una captura nueva."
+  },
+  "settings-roll-v3.png": {
+    "status": "old",
+    "note": "Faltan las filas Diseño de la ventana (con Vista previa) y Posición de la ventana (Mover, Restablecer, Guardar)."
+  }
 }

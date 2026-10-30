@@ -1973,13 +1973,67 @@ end
 -- ── Detection callback ────────────────────────────────────────────────────────
 -- Wired to Detection module: flash the detected item row green, print to chat.
 
+-- The item of the detection message is a link of our own (vcaitem:<itemID>:<ilvl>). Clicking it shows the
+-- tooltip of the item you own (bags first, then equipped; the one with that item level if you have several),
+-- and when it is gone (sold, thrown away) the plain tooltip of the item.
+local function FindOwnedItem(itemID, itemLevel)
+    local fallback
+    local function Check(kind, a, b, link)
+        local ilvl = link and C_Item.GetDetailedItemLevelInfo(link)
+        if not itemLevel or ilvl == itemLevel then
+            return {kind, a, b}
+        end
+        fallback = fallback or {kind, a, b}
+    end
+    for bag = 0, NUM_TOTAL_EQUIPPED_BAG_SLOTS or 5 do
+        for slot = 1, C_Container.GetContainerNumSlots(bag) do
+            local info = C_Container.GetContainerItemInfo(bag, slot)
+            if info and info.itemID == itemID then
+                local exact = Check("bag", bag, slot, info.hyperlink)
+                if exact then
+                    return exact
+                end
+            end
+        end
+    end
+    for slot = 1, 19 do
+        local link = GetInventoryItemLink("player", slot)
+        if link and C_Item.GetItemInfoInstant(link) == itemID then
+            local exact = Check("inv", slot, nil, link)
+            if exact then
+                return exact
+            end
+        end
+    end
+    return fallback
+end
+
+hooksecurefunc("SetItemRef", function(link)
+    local id, ilvl = tostring(link):match("^vcaitem:(%d+):?(%d*)")
+    if not id then
+        return
+    end
+    local itemID = tonumber(id)
+    ShowUIPanel(ItemRefTooltip)
+    ItemRefTooltip:SetOwner(UIParent, "ANCHOR_PRESERVE")
+    local owned = FindOwnedItem(itemID, tonumber(ilvl))
+    if owned and owned[1] == "bag" then
+        ItemRefTooltip:SetBagItem(owned[2], owned[3])
+    elseif owned then
+        ItemRefTooltip:SetInventoryItem("player", owned[2])
+    else
+        ItemRefTooltip:SetItemByID(itemID)
+    end
+end)
+
 VCA.Detection.SetOnItemDetectedCallback(function(itemID, source, itemLevel)
     -- Chat message (with the item level the roll gave, so a wrong difficulty is easy to spot)
     local itemName = C_Item.GetItemNameByID(itemID) or tostring(itemID)
     if itemLevel then
         itemName = itemName .. " (ilvl " .. itemLevel .. ")"
     end
-    print(VCA.Theme.hdr .. "VoidcoreAdvisor Reborn:|r " .. string.format(L["DETECTED_OBTAINED"], "|cnIQ4:" .. itemName .. "|r"))
+    local link = "|cnIQ4:|Hvcaitem:" .. itemID .. ":" .. (itemLevel or "") .. "|h" .. itemName .. "|h|r"
+    print(VCA.Theme.hdr .. "VoidcoreAdvisor Reborn:|r " .. string.format(L["DETECTED_OBTAINED"], link))
 
     -- Remove from saved selections now that it's obtained.
     VCA.Data.RemoveSelectedItem(source.sourceType, source.sourceID, source.difficultyID, itemID)
