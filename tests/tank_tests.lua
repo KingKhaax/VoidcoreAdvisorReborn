@@ -45,3 +45,11 @@ test("Tank trinkets: unknown items are retried later", function()
     local added2, complete2 = TT.Augment(pools, function(id) return id == 999 or trinkets[id] == true end)
     assert(complete2 == true and added2 == 1 and #pools[66] == 3)
 end)
+
+test("Tank trinkets: IsAdded tells the trinkets the addon added from the ones the game lists", function()
+    local pools = {[66] = {1}, [70] = {500, 1}}
+    TT.Augment(pools, isTrinket)
+    assert(TT.IsAdded(66, 500) == true)
+    assert(TT.IsAdded(66, 1) == false)
+    assert(TT.IsAdded(70, 500) == false)
+end)

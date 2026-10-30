@@ -19,6 +19,11 @@ TankTrinkets.SIBLINGS = {
 }
 
 local done = setmetatable({}, {__mode = "k"})
+local addedBy = {}
+
+function TankTrinkets.IsAdded(specID, itemID)
+    return addedBy[specID] ~= nil and addedBy[specID][itemID] == true
+end
 
 -- Adds to each tank list of `pools` (map specID -> list of item IDs) the trinkets that its
 -- damage siblings have and it lacks. isTrinket(itemID) returns true, false, or nil when the item
@@ -45,6 +50,8 @@ function TankTrinkets.Augment(pools, isTrinket)
                                 complete = false
                             elseif trinket then
                                 tankList[#tankList + 1] = id
+                                addedBy[tankSpec] = addedBy[tankSpec] or {}
+                                addedBy[tankSpec][id] = true
                                 have[id] = true
                                 added = added + 1
                             end

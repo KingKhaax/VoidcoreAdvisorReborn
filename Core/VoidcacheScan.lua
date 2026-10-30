@@ -24,6 +24,9 @@ local RETRY_DELAY = 0.35 -- seconds between retries for the same item
 local STEP_DELAY = 0.5 -- seconds between successful scan steps (slowed for readable logs)
 local SPEC_CHANGE_DELAY = 1.2 -- seconds to wait after SetLootSpecialization
 local MIN_LINES = 7 -- minimum tooltip lines required for a valid read
+local SUSPICIOUS_MIN = 5
+local SUSPICIOUS_RATIO = 0.6
+local CONFIRM_LIST_MAX = 12
 
 -- ── Logging ───────────────────────────────────────────────────────────────────
 
@@ -150,12 +153,78 @@ local function ReportScan(doneKey, marked, stats, hintKey)
     if stats.mismatch > 0 then
         Log(string.format(L["SCAN_MISMATCH"], stats.mismatch))
     end
+    if stats.suspicious > 0 then
+        Log(string.format(L["SCAN_SUSPICIOUS"], stats.suspicious))
+    end
     if stats.uncached > 0 then
         Log(string.format(L["SCAN_UNCACHED"], stats.uncached))
     end
     if marked == 0 then
         Log(L[hintKey])
+    else
+        Log(L["SCAN_UNDO_HINT"])
     end
+end
+
+local function CollectPool(specID, sourceID, nameCache, seen, pending, stats, skipped)
+    local found, size = {}, 0
+    for itemName, itemID in pairs(nameCache) do
+        size = size + 1
+        if not seen[itemName] and not (VCA.TankTrinkets and VCA.TankTrinkets.IsAdded(specID, itemID)) then
+            found[#found + 1] = {sourceID = sourceID, specID = specID, itemID = itemID, name = itemName}
+        end
+    end
+    if #found >= SUSPICIOUS_MIN and #found > size * SUSPICIOUS_RATIO then
+        skipped[specID .. ":" .. sourceID] = true
+        stats.suspicious = stats.suspicious + 1
+        return
+    end
+    for _, entry in ipairs(found) do
+        pending[#pending + 1] = entry
+    end
+end
+
+local function UniqueNames(pending)
+    local seen, names = {}, {}
+    for _, entry in ipairs(pending) do
+        if not seen[entry.itemID] then
+            seen[entry.itemID] = true
+            names[#names + 1] = entry.name
+        end
+    end
+    table.sort(names)
+    return names
+end
+
+local function ConfirmMarks(pending, headerKey, onAccept)
+    if #pending == 0 then
+        onAccept()
+        return
+    end
+    local L = VCA.L
+    local names = UniqueNames(pending)
+    local shown = {}
+    for i = 1, math.min(#names, CONFIRM_LIST_MAX) do
+        shown[i] = names[i]
+    end
+    local text = string.format(L[headerKey], #names) .. "\n\n" .. table.concat(shown, "\n")
+    if #names > CONFIRM_LIST_MAX then
+        text = text .. "\n" .. string.format(L["SCAN_CONFIRM_MORE"], #names - CONFIRM_LIST_MAX)
+    end
+    StaticPopupDialogs["VOIDCORE_SCAN_MARKS"] = {
+        text = "%s",
+        button1 = ACCEPT,
+        button2 = CANCEL,
+        OnAccept = onAccept,
+        OnCancel = function()
+            Log(L["SCAN_CANCELLED"])
+        end,
+        timeout = 0,
+        whileDead = true,
+        hideOnEscape = true,
+        preferredIndex = 3
+    }
+    StaticPopup_Show("VOIDCORE_SCAN_MARKS", text)
 end
 
 -- ── Name cache ────────────────────────────────────────────────────────────────
@@ -243,39 +312,20 @@ local function FinalizeScan()
     local diffID = VCA.MythicPlusEJDifficulty
     local contentType = VCA.ContentType.MYTHIC_PLUS
 
-    -- 1. Snapshot existing MYTHIC_PLUS obtained entries before clearing (enables restore).
-    db.obtained = db.obtained or {}
-    db.obtainedBackup = db.obtainedBackup or {}
-    db.obtainedBackup.mythicPlus = {}
-    db.obtainedBackup.mythicPlusTime = time()
-    for key, val in pairs(db.obtained) do
-        if key:sub(1, 12) == "MYTHIC_PLUS:" then
-            db.obtainedBackup.mythicPlus[key] = val
-        end
-    end
-
-    for key in pairs(db.obtained) do
-        if key:sub(1, 12) == "MYTHIC_PLUS:" then
-            db.obtained[key] = nil
-        end
-    end
-
     local skipped = {}
     local stats = {
         pools = 0,
         unreadable = 0,
         mismatch = 0,
+        suspicious = 0,
         uncached = 0
     }
     for _ in pairs(_state.missing) do
         stats.uncached = stats.uncached + 1
     end
 
-    -- 2. Apply scan results for every season dungeon.
     local instanceIDs = VCA.LootPool.GetSeasonDungeonInstanceIDs()
-
-    -- Apply results per-spec so each spec is only judged against its own item pool.
-    local markedItemIDs = {}
+    local pending = {}
 
     for _, specEntry in ipairs(specs) do
         local specID = specEntry.specID
@@ -289,12 +339,7 @@ local function FinalizeScan()
             stats.pools = stats.pools + 1
 
             if status == "OK" then
-                for itemName, itemID in pairs(nameCache) do
-                    if not specItems[itemName] then
-                        markedItemIDs[itemID] = true
-                        VCA.Data.SetObtained(contentType, instanceID, diffID, specID, itemID, true)
-                    end
-                end
+                CollectPool(specID, instanceID, nameCache, specItems, pending, stats, skipped)
             else
                 skipped[specID .. ":" .. instanceID] = true
                 if status == "UNREADABLE" then
@@ -303,17 +348,33 @@ local function FinalizeScan()
                     stats.mismatch = stats.mismatch + 1
                 end
             end
-
         end
     end
 
-    local totalMarked = 0
-    for _ in pairs(markedItemIDs) do
-        totalMarked = totalMarked + 1
-    end
-
-    RestoreSkippedPools(db, db.obtainedBackup.mythicPlus, skipped, "MYTHIC_PLUS")
-    ReportScan("SCAN_DONE", totalMarked, stats, "SCAN_HINT_DUNGEON")
+    ConfirmMarks(pending, "SCAN_CONFIRM_MARKS", function()
+        db.obtained = db.obtained or {}
+        db.obtainedBackup = db.obtainedBackup or {}
+        db.obtainedBackup.mythicPlus = {}
+        db.obtainedBackup.mythicPlusTime = time()
+        for key, val in pairs(db.obtained) do
+            if key:sub(1, 12) == "MYTHIC_PLUS:" then
+                db.obtainedBackup.mythicPlus[key] = val
+            end
+        end
+        for key in pairs(db.obtained) do
+            if key:sub(1, 12) == "MYTHIC_PLUS:" then
+                db.obtained[key] = nil
+            end
+        end
+        for _, entry in ipairs(pending) do
+            VCA.Data.SetObtained(contentType, entry.sourceID, diffID, entry.specID, entry.itemID, true)
+        end
+        RestoreSkippedPools(db, db.obtainedBackup.mythicPlus, skipped, "MYTHIC_PLUS")
+        ReportScan("SCAN_DONE", #UniqueNames(pending), stats, "SCAN_HINT_DUNGEON")
+        if VCA.DungeonOverview and VCA.DungeonOverview.Refresh then
+            VCA.DungeonOverview.Refresh()
+        end
+    end)
 
     -- 3. Restore original loot spec.
     _combatFrame:UnregisterEvent("PLAYER_REGEN_DISABLED")
@@ -587,43 +648,19 @@ local function FinalizeRaidScan()
     local diffID = _raidState.difficultyID
     local contentType = VCA.ContentType.RAID
 
-    -- 1. Snapshot existing RAID obtained entries for this difficulty before clearing (enables restore).
-    db.obtained = db.obtained or {}
-    db.obtainedBackup = db.obtainedBackup or {}
-    db.obtainedBackup.raid = {}
-    db.obtainedBackup.raidTime = time()
-    db.obtainedBackup.raidDiffID = diffID
-    for key, val in pairs(db.obtained) do
-        if key:sub(1, 5) == "RAID:" then
-            local _, kDiff = key:match("^RAID:%d+:(%d+):")
-            if tonumber(kDiff) == diffID then
-                db.obtainedBackup.raid[key] = val
-            end
-        end
-    end
-
-    for key in pairs(db.obtained) do
-        -- Keys are formatted as "RAID:encounterID:diffID:specID:itemID"
-        if key:sub(1, 5) == "RAID:" then
-            local _, kDiff = key:match("^RAID:%d+:(%d+):")
-            if tonumber(kDiff) == diffID then
-                db.obtained[key] = nil
-            end
-        end
-    end
-
     local skipped = {}
     local stats = {
         pools = 0,
         unreadable = 0,
         mismatch = 0,
+        suspicious = 0,
         uncached = 0
     }
     for _ in pairs(_raidState.missing) do
         stats.uncached = stats.uncached + 1
     end
 
-    local markedItemIDs = {}
+    local pending = {}
     for _, specEntry in ipairs(specs) do
         local specID = specEntry.specID
         local specResults = results[specID] or {}
@@ -634,12 +671,7 @@ local function FinalizeRaidScan()
             local status = PoolStatus(seenItems, nameCache)
             stats.pools = stats.pools + 1
             if status == "OK" then
-                for itemName, itemID in pairs(nameCache) do
-                    if not seenItems[itemName] then
-                        markedItemIDs[itemID] = true
-                        VCA.Data.SetObtained(contentType, encounterID, diffID, specID, itemID, true)
-                    end
-                end
+                CollectPool(specID, encounterID, nameCache, seenItems, pending, stats, skipped)
             else
                 skipped[specID .. ":" .. encounterID] = true
                 if status == "UNREADABLE" then
@@ -651,12 +683,37 @@ local function FinalizeRaidScan()
         end
     end
 
-    local totalMarked = 0
-    for _ in pairs(markedItemIDs) do
-        totalMarked = totalMarked + 1
-    end
-    RestoreSkippedPools(db, db.obtainedBackup.raid, skipped, "RAID")
-    ReportScan("RAID_SCAN_DONE", totalMarked, stats, "SCAN_HINT_RAID")
+    ConfirmMarks(pending, "SCAN_CONFIRM_MARKS", function()
+        db.obtained = db.obtained or {}
+        db.obtainedBackup = db.obtainedBackup or {}
+        db.obtainedBackup.raid = {}
+        db.obtainedBackup.raidTime = time()
+        db.obtainedBackup.raidDiffID = diffID
+        for key, val in pairs(db.obtained) do
+            if key:sub(1, 5) == "RAID:" then
+                local _, kDiff = key:match("^RAID:%d+:(%d+):")
+                if tonumber(kDiff) == diffID then
+                    db.obtainedBackup.raid[key] = val
+                end
+            end
+        end
+        for key in pairs(db.obtained) do
+            if key:sub(1, 5) == "RAID:" then
+                local _, kDiff = key:match("^RAID:%d+:(%d+):")
+                if tonumber(kDiff) == diffID then
+                    db.obtained[key] = nil
+                end
+            end
+        end
+        for _, entry in ipairs(pending) do
+            VCA.Data.SetObtained(contentType, entry.sourceID, diffID, entry.specID, entry.itemID, true)
+        end
+        RestoreSkippedPools(db, db.obtainedBackup.raid, skipped, "RAID")
+        ReportScan("RAID_SCAN_DONE", #UniqueNames(pending), stats, "SCAN_HINT_RAID")
+        if VCA.RaidOverview and VCA.RaidOverview.Refresh then
+            VCA.RaidOverview.Refresh()
+        end
+    end)
 
     -- 3. Restore original loot spec.
     _raidCombatFrame:UnregisterEvent("PLAYER_REGEN_DISABLED")
@@ -958,25 +1015,42 @@ function Scan.Owned()
     end
 
     local specID = VCA.SpecInfo.GetEffectiveLootSpecID()
-    local marked = 0
-    local function Mark(contentType, sourceID, diffID, itemList)
+    local pending = {}
+    local function Collect(contentType, sourceID, diffID, itemList)
         for _, itemID in ipairs(itemList or {}) do
-            if owned[itemID] and not VCA.Data.IsObtained(contentType, sourceID, diffID, specID, itemID) then
-                VCA.Data.SetObtained(contentType, sourceID, diffID, specID, itemID, true)
-                marked = marked + 1
+            if owned[itemID] and select(4, C_Item.GetItemInfoInstant(itemID)) ~= "INVTYPE_TRINKET"
+                and not VCA.Data.IsObtained(contentType, sourceID, diffID, specID, itemID) then
+                pending[#pending + 1] = {
+                    contentType = contentType,
+                    sourceID = sourceID,
+                    diffID = diffID,
+                    itemID = itemID,
+                    name = C_Item.GetItemNameByID(itemID) or tostring(itemID)
+                }
             end
         end
     end
 
     for instanceID, dungeon in pairs(VCA.SeasonData.dungeons) do
-        Mark(VCA.ContentType.MYTHIC_PLUS, instanceID, VCA.MythicPlusEJDifficulty,
+        Collect(VCA.ContentType.MYTHIC_PLUS, instanceID, VCA.MythicPlusEJDifficulty,
             dungeon.bySpec and dungeon.bySpec[specID])
     end
     for encounterID, raid in pairs(VCA.SeasonData.raids) do
         for diffID, specMap in pairs(raid.bySpec or {}) do
-            Mark(VCA.ContentType.RAID, encounterID, diffID, specMap[specID])
+            Collect(VCA.ContentType.RAID, encounterID, diffID, specMap[specID])
         end
     end
-    Log(string.format(VCA.L["SCAN_OWNED_DONE"], marked))
-    return marked
+
+    if #pending == 0 then
+        Log(string.format(VCA.L["SCAN_OWNED_DONE"], 0))
+        return 0
+    end
+    ConfirmMarks(pending, "SCAN_CONFIRM_OWNED", function()
+        for _, entry in ipairs(pending) do
+            VCA.Data.SetObtained(entry.contentType, entry.sourceID, entry.diffID, specID, entry.itemID, true)
+        end
+        Log(string.format(VCA.L["SCAN_OWNED_DONE"], #UniqueNames(pending)))
+        Log(VCA.L["SCAN_UNDO_HINT"])
+    end)
+    return #pending
 end

@@ -1,3 +1,17 @@
+Version: 2.11.2
+2026/10/30 Released
+
+🔮 New
+- [Scan] The Voidcache scan of dungeons and of raids, and `/void scan owned`, now show the list of items they are about to mark and ask for confirmation before saving. If you cancel, nothing changes.
+- [Scan] After a scan that marks items, the chat tells you how to undo it: `/void restore` undoes the last scan, or you can unmark an item in Mark rolled item mode.
+
+🛠️ Fix
+- [Scan] The scan no longer marks the trinkets that the addon adds to the tank specializations (damage trinkets of the same main stat), which the game does not list in the Voidcache tooltip. They could be marked as obtained on characters that never rolled them. Reported on CurseForge.
+- [Scan] When a scan would mark almost a whole pool (at least 5 items and more than 60% of it), that pool is ignored and the chat says so, because it looks like the tooltip and the data do not match. The marks that pool already had are kept.
+- [Scan] `/void scan owned` skips trinkets.
+
+---
+
 Version: 2.11.1
 2026/10/30 Released
 

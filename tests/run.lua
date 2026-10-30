@@ -140,6 +140,7 @@ _G.test, _G.near = test, near
 dofile("tests/data_tests.lua")
 dofile("tests/tools_tests.lua")
 dofile("tests/tank_tests.lua")
+dofile("tests/scan_tests.lua")
 
 print(string.format("%d tests, %d failed", total, failures))
 os.exit(failures == 0 and 0 or 1)
