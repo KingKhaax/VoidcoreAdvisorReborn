@@ -369,7 +369,7 @@ do
     check("Detection.CheckAndResetIfComplete resets only the spec whose pool is complete", function()
         _G.VoidcoreAdvisorCharDB = {obtained = {}}
         VCA.SpecInfo.GetPlayerClassID = function() return 10 end
-        VCA.LootPool.GetCachedItemsForSpec = function() return {1, 2} end
+        VCA.LootPool.GetItemsForSpec = function() return {1, 2} end
         local src = {sourceType = "RAID", sourceID = 900, difficultyID = 15}
         VCA.Data.SetObtained("RAID", 900, 15, 268, 1, true)
         VCA.Data.SetObtained("RAID", 900, 15, 269, 1, true)

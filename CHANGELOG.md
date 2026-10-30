@@ -1,3 +1,17 @@
+Version: 2.11.4
+2026/10/30 Released
+
+💪 Improvement
+- [Reset] When a specialization finishes the pool of a boss or dungeon, its marks are cleared to start a new cycle, as before, but now the chat tells you and shows an [Undo] link: clicking it puts the marks back. Nothing to type.
+
+🛠️ Fix
+- [Loot data] Raid tier tokens are back in the loot lists of every raid boss (version 2.11.3 removed them by mistake). The curio of Ula'tek is left out on purpose, since a Voidcore cannot give it. Reported on CurseForge.
+- [Loot data] Once per version the addon now checks its loot lists against the Adventure Guide by itself (the same as /void audit) and adds any item that was missing, so lists that lost items to an older version heal without doing anything. It says one line in the chat when it adds something.
+- [Detection] A roll is now marked even if the addon has just loaded and is still preparing its loot lists; before, it could be missed until a later login. The same goes for finishing the pool of a specialization.
+- [Scan] Reading the Voidcache tooltip no longer depends on the line where the item list starts or on its dash marker, and a tooltip the addon cannot understand never offers a whole pool as obtained.
+
+---
+
 Version: 2.11.3
 2026/10/30 Released
 

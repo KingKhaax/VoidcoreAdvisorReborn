@@ -10,6 +10,9 @@ local Detection = VCA.Detection
 local sourceOverride = nil -- optional UI-selected source context
 local onDetectedCallback = nil -- function(itemID, source) | nil
 local pendingRewards = {}
+-- True only while a roll that just happened is being processed (not while old rolls are replayed),
+-- so a cycle reset is remembered and announced once, when it really happens.
+local liveRoll = false
 -- Key level captured at CHALLENGE_MODE_START / CHALLENGE_MODE_COMPLETED, before
 -- GetActiveKeystoneInfo() goes stale after the keystone is consumed.
 -- Also persisted to SavedVariables so a /reload inside or after a run survives.
@@ -210,9 +213,9 @@ local function FindDetectedItem(itemID, source)
         return nil
     end
 
-    local cachedItemIDs = VCA.LootPool and VCA.LootPool.GetCachedItemsForClass and
+    local cachedItemIDs = VCA.LootPool and VCA.LootPool.GetItemsForClass and
                               VCA.LootPool
-                                  .GetCachedItemsForClass(source.sourceType, source.sourceID, source.difficultyID,
+                                  .GetItemsForClass(source.sourceType, source.sourceID, source.difficultyID,
             classID)
 
     if not cachedItemIDs then
@@ -251,6 +254,53 @@ end
 
 -- -- Item detection -----------------------------------------------------------
 
+local function SourceName(source)
+    local name
+    if source.sourceType == VCA.ContentType.RAID then
+        name = EJ_GetEncounterInfo and EJ_GetEncounterInfo(source.sourceID)
+    else
+        name = EJ_GetInstanceInfo and EJ_GetInstanceInfo(source.sourceID)
+    end
+    return name or tostring(source.sourceID)
+end
+
+-- A reset throws away marks, so keep them and tell the player, with a link that puts them back:
+-- no command to type.
+local function RememberReset(keys, source, specID)
+    local db = _G[VCA.CHAR_DB_NAME]
+    if not db or not next(keys) then
+        return
+    end
+    db.lastReset = {time = time(), keys = keys}
+    local specName = GetSpecializationInfoByID and (select(2, GetSpecializationInfoByID(specID))) or nil
+    local link = "|cff00ccff|Hvcaundo:reset|h" .. VCA.L["CYCLE_RESET_UNDO"] .. "|h|r"
+    print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " ..
+              string.format(VCA.L["CYCLE_RESET"], specName or tostring(specID), SourceName(source), link))
+end
+
+if hooksecurefunc then
+    hooksecurefunc("SetItemRef", function(link)
+        if tostring(link) ~= "vcaundo:reset" then
+            return
+        end
+        local db = _G[VCA.CHAR_DB_NAME]
+        local reset = db and db.lastReset
+        if not (reset and reset.keys) then
+            print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["RESET_NOTHING"])
+            return
+        end
+        VCA.Data.RestoreKeys(reset.keys)
+        db.lastReset = nil
+        print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. VCA.L["RESET_UNDONE"])
+        for _, name in ipairs({"Panel", "DungeonOverview", "RaidOverview"}) do
+            local window = VCA[name]
+            if window and window.Refresh then
+                pcall(window.Refresh)
+            end
+        end
+    end)
+end
+
 -- Checks whether every item in the spec-specific pool is now obtained for
 -- the given key tier.  If so, resets the obtained flags of THAT spec only on this
 -- source, so its cycle starts over while the other specs keep their progress.
@@ -266,9 +316,9 @@ local function CheckAndResetIfComplete(source, specID, isHighTier)
         return false
     end
 
-    local specPool = VCA.LootPool and VCA.LootPool.GetCachedItemsForSpec and
+    local specPool = VCA.LootPool and VCA.LootPool.GetItemsForSpec and
                          VCA.LootPool
-                             .GetCachedItemsForSpec(source.sourceType, source.sourceID, source.difficultyID, classID,
+                             .GetItemsForSpec(source.sourceType, source.sourceID, source.difficultyID, classID,
             specID)
     if not specPool or #specPool == 0 then
         return false
@@ -283,7 +333,13 @@ local function CheckAndResetIfComplete(source, specID, isHighTier)
 
     -- All items obtained for this spec+tier: only this spec starts a new cycle. The other
     -- specs keep what they have, because their own pools are not finished.
+    local snapshot = liveRoll and
+                         VCA.Data.SnapshotSource(source.sourceType, source.sourceID, source.difficultyID, specID,
+            isHighTier)
     VCA.Data.ClearSourceForKeyTier(source.sourceType, source.sourceID, source.difficultyID, specID, isHighTier)
+    if snapshot then
+        RememberReset(snapshot, source, specID)
+    end
     return true
 end
 
@@ -471,9 +527,9 @@ local function TryMarkItemInAllRaidEncounters(itemID, raidInstanceID, difficulty
     for encounterID, raidData in pairs(VCA.SeasonData.raids) do
         if raidData.instanceID == raidInstanceID then
             local source = CreateSource(VCA.ContentType.RAID, encounterID, difficultyID, nil)
-            local pool = VCA.LootPool and VCA.LootPool.GetCachedItemsForClass and
+            local pool = VCA.LootPool and VCA.LootPool.GetItemsForClass and
                              VCA.LootPool
-                                 .GetCachedItemsForClass(VCA.ContentType.RAID, encounterID, difficultyID, classID)
+                                 .GetItemsForClass(VCA.ContentType.RAID, encounterID, difficultyID, classID)
             if pool then
                 for _, id in ipairs(pool) do
                     if id == itemID then
@@ -744,9 +800,9 @@ function Detection.ReplayBonusRollLog(verbose)
                 end
             else
                 local classID = VCA.SpecInfo and VCA.SpecInfo.GetPlayerClassID and VCA.SpecInfo.GetPlayerClassID()
-                local cachedPool = classID and VCA.LootPool and VCA.LootPool.GetCachedItemsForClass and
+                local cachedPool = classID and VCA.LootPool and VCA.LootPool.GetItemsForClass and
                                        VCA.LootPool
-                                           .GetCachedItemsForClass(source.sourceType, source.sourceID,
+                                           .GetItemsForClass(source.sourceType, source.sourceID,
                         source.difficultyID, classID)
                 local inPool = false
                 if cachedPool then
@@ -1003,8 +1059,13 @@ function handlers.BONUS_ROLL_RESULT(typeIdentifier, itemLink, quantity, specID)
     local rolledLevel = GetLinkItemLevel(itemLink)
     C_Timer.After(0, function()
         activeItemLevel = rolledLevel
-        ProcessRewardItem(itemID, specID, capturedSource)
+        liveRoll = true
+        local ok, err = pcall(ProcessRewardItem, itemID, specID, capturedSource)
+        liveRoll = false
         activeItemLevel = nil
+        if not ok then
+            error(err, 0)
+        end
         -- Replay the full log as a safety net: if the pool cache was not warm
         -- when ProcessRewardItem ran, the log entry now has the correct source.
         Detection.ReplayBonusRollLog(false)

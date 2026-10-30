@@ -85,3 +85,11 @@ test("Scan owned: if the window fails to open, nothing is saved", function()
     VCA5.ScanSelect.Show = real
     assert(next(marked) == nil)
 end)
+
+test("Scan tooltip parser: item names are found whatever the marker or the line they start on", function()
+    local function lines(...) local t = {} for i, text in ipairs({...}) do t[i] = {leftText = text} end return {lines = t} end
+    local tip = lines("Nebulous Voidcache", "a", "b", "c", "d", "|cff00ff00- Sword of Tests|r", "• Helm of Tests", "  Ring of Tests  ", "|TInterface/x:0|t - Cloak of Tests")
+    local parsed = Scan.ParseTooltip(tip, #tip.lines)
+    assert(parsed["Sword of Tests"] and parsed["Helm of Tests"] and parsed["Ring of Tests"] and parsed["Cloak of Tests"])
+    assert(Scan.ParseTooltip(lines("one", "two"), 2) == nil, "a thin tooltip is not read")
+end)

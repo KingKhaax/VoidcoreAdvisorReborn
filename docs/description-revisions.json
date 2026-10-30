@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-10-30",
+    "version": "2.11.4",
+    "notes": [
+      "Mejorado: al reiniciarse un ciclo (pool terminado) el chat lo dice con un enlace [Deshacer] que devuelve las marcas.",
+      "Corregido: los tokens de tier vuelven en las raids (menos el curio de Ula'tek); comprobación automática de las listas una vez por versión; detección y escaneo más robustos."
+    ]
+  },
+  {
+    "date": "2026-10-30",
     "version": "2.11.3",
     "notes": [
       "Nuevo: el escaneo y /void scan owned abren una ventana con los objetos encontrados, sin marcar, y solo se guardan los que elige el jugador.",

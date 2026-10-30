@@ -105,7 +105,7 @@ local function ReadLoot(classID, specID)
         local info = C_EncounterJournal.GetLootInfoByIndex(i)
         local itemID = info and info.itemID
         if itemID and itemID > 0 and not seen[itemID] and not info.displayAsPerPlayerLoot
-            and not (VCA.GearFilter and VCA.GearFilter.IsGear(itemID) == false) then
+            and not (VCA.GearFilter and VCA.GearFilter.Keep(itemID, true) == false) then
             local quality = ItemQuality(itemID, info.link)
             if quality == nil then
                 return nil, nil, false
@@ -388,6 +388,14 @@ local function SeasonRaidInstances()
     return list
 end
 
+-- The audit also runs by itself (once per addon version): then it says nothing but its result.
+local auditQuiet = false
+local function AuditSay(text)
+    if not auditQuiet then
+        Say(true, text)
+    end
+end
+
 local function AuditInstance(store, instanceID, entry, report)
     local instanceAdded = 0
     for encounterID, live in pairs(entry.raids) do
@@ -401,7 +409,7 @@ local function AuditInstance(store, instanceID, entry, report)
                     names[#names + 1] = C_Item.GetItemNameByID(itemID) or tostring(itemID)
                 end
                 table.sort(names)
-                Say(true, string.format(L["AUDIT_BOSS"], EJ_GetEncounterInfo(encounterID) or tostring(encounterID),
+                AuditSay(string.format(L["AUDIT_BOSS"], EJ_GetEncounterInfo(encounterID) or tostring(encounterID),
                     #names, table.concat(names, ", ")))
                 instanceAdded = instanceAdded + #names
             end
@@ -415,14 +423,16 @@ local function AuditInstance(store, instanceID, entry, report)
     report.added = report.added + instanceAdded
 end
 
-function LiveRaid.Audit()
+-- auto = true: started by the addon, silent, and false is returned when it is not a good moment.
+function LiveRaid.Audit(auto)
+    auditQuiet = auto == true
     local store = GetDB()
     if not store then
         return
     end
-    if InCombatLockdown() or IsInInstance() then
-        Say(true, L["LIVE_RAID_NO_ACCESS"])
-        return
+    if InCombatLockdown() or IsInInstance() or (auto and EncounterJournal and EncounterJournal:IsShown()) then
+        AuditSay(L["LIVE_RAID_NO_ACCESS"])
+        return false
     end
     if C_AddOns and C_AddOns.LoadAddOn then
         C_AddOns.LoadAddOn("Blizzard_EncounterJournal")
@@ -431,17 +441,26 @@ function LiveRaid.Audit()
         return
     end
     local instances = SeasonRaidInstances()
-    local report = {added = 0}
-    Say(true, L["AUDIT_START"])
+    local report = {added = 0, failed = 0}
+    AuditSay(L["AUDIT_START"])
 
     local function Step(i, attempt)
         local instanceID = instances[i]
         if not instanceID then
             if report.added > 0 then
                 Refresh()
-                Say(true, string.format(L["AUDIT_DONE"], #instances, report.added))
+                if auto then
+                    print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " ..
+                              string.format(L["AUDIT_AUTO_DONE"], report.added))
+                else
+                    Say(true, string.format(L["AUDIT_DONE"], #instances, report.added))
+                end
             else
-                Say(true, L["AUDIT_NONE"])
+                AuditSay(L["AUDIT_NONE"])
+            end
+            local gdb = _G[VCA.GLOBAL_DB_NAME]
+            if auto and gdb and report.failed == 0 then
+                gdb.auditedVersion = VCA.VERSION
             end
             return
         end
@@ -454,7 +473,8 @@ function LiveRaid.Audit()
                 Step(i, attempt + 1)
             end)
         else
-            Say(true, string.format(L["AUDIT_FAILED"], tostring(select(1, EJ_GetInstanceInfo(instanceID)) or instanceID)))
+            report.failed = report.failed + 1
+            AuditSay(string.format(L["AUDIT_FAILED"], tostring(select(1, EJ_GetInstanceInfo(instanceID)) or instanceID)))
             Step(i + 1, 1)
         end
     end
@@ -493,5 +513,21 @@ frame:SetScript("OnEvent", function(self, event, name)
             TryScan(1)
         end)
         C_Timer.After(25, CheckOutdated)
+        -- Once per addon version, check the loot lists against the Adventure Guide by itself (the same as
+        -- /void audit), so lists that lost items to an older version heal without the player doing anything.
+        local function AutoAudit(attempt)
+            local gdb = _G[VCA.GLOBAL_DB_NAME]
+            if not gdb or gdb.auditedVersion == VCA.VERSION then
+                return
+            end
+            if LiveRaid.Audit(true) == false and attempt < 10 then
+                C_Timer.After(60, function()
+                    AutoAudit(attempt + 1)
+                end)
+            end
+        end
+        C_Timer.After(45, function()
+            AutoAudit(1)
+        end)
     end
 end)

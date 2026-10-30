@@ -212,36 +212,6 @@ end
 
 -- ── Bulk operations ───────────────────────────────────────────────────────────
 
--- Returns all itemIDs from the DB for the given source, difficulty, and spec.
--- If specID is nil, returns items obtained under any specialization.
-function Data.GetObtainedForSource(sourceType, sourceID, difficultyID, specID)
-    local db = _G[VCA.CHAR_DB_NAME]
-    if not db or not db.obtained then
-        return {}
-    end
-    -- Key format after prefix: "specID:itemID"
-    local prefix = sourceType .. ":" .. sourceID .. ":" .. difficultyID .. ":"
-    local specPrefix = specID and (tostring(specID) .. ":") or nil
-    local result = {}
-    for key in pairs(db.obtained) do
-        if key:sub(1, #prefix) == prefix then
-            local rest = key:sub(#prefix + 1)
-            local itemID
-            if specPrefix then
-                if rest:sub(1, #specPrefix) == specPrefix then
-                    itemID = tonumber(rest:sub(#specPrefix + 1))
-                end
-            else
-                itemID = tonumber(rest:match(":(%d+)$"))
-            end
-            if itemID then
-                result[#result + 1] = itemID
-            end
-        end
-    end
-    return result
-end
-
 -- Clears all obtained data for one source + difficulty combination.
 -- If specID is provided, only clears data for that specialization.
 function Data.ClearSource(sourceType, sourceID, difficultyID, specID)
@@ -258,6 +228,39 @@ function Data.ClearSource(sourceType, sourceID, difficultyID, specID)
                 db.obtained[key] = nil
             end
         end
+    end
+end
+
+-- The keys ClearSourceForKeyTier would remove, as { [key] = true }, so a reset can be undone.
+function Data.SnapshotSource(sourceType, sourceID, difficultyID, specID, isHighTier)
+    local db = _G[VCA.CHAR_DB_NAME]
+    local keys = {}
+    if not db or not db.obtained then
+        return keys
+    end
+    local prefix = sourceType .. ":" .. sourceID .. ":" .. difficultyID .. ":"
+    local specPrefix = specID and (tostring(specID) .. ":") or nil
+    local suffix = isHighTier ~= nil and (isHighTier and ":H" or ":L") or nil
+    for key in pairs(db.obtained) do
+        if key:sub(1, #prefix) == prefix then
+            local rest = key:sub(#prefix + 1)
+            if (not specPrefix or rest:sub(1, #specPrefix) == specPrefix) and (not suffix or key:sub(-2) == suffix) then
+                keys[key] = true
+            end
+        end
+    end
+    return keys
+end
+
+-- Marks every key of a snapshot as obtained again.
+function Data.RestoreKeys(keys)
+    local db = _G[VCA.CHAR_DB_NAME]
+    if not db then
+        return
+    end
+    db.obtained = db.obtained or {}
+    for key in pairs(keys) do
+        db.obtained[key] = true
     end
 end
 

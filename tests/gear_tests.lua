@@ -26,12 +26,28 @@ local GF = VCA6.GearFilter
 test("Gear filter: armor, trinkets, rings and weapons give item level", function()
     assert(GF.IsGear(1) == true and GF.IsGear(2) == true and GF.IsGear(3) == true and GF.IsGear(9) == true)
 end)
-test("Gear filter: mounts, pets, tokens, shirts and cosmetic armor do not", function()
+test("Gear filter: mounts, pets, shirts and cosmetic armor do not; tokens are not gear but are tokens", function()
     assert(GF.IsGear(4) == false, "mount")
     assert(GF.IsGear(5) == false, "pet")
     assert(GF.IsGear(6) == false, "cosmetic cloak")
     assert(GF.IsGear(7) == false, "shirt")
-    assert(GF.IsGear(8) == false, "token")
+    assert(GF.IsGear(8) == false, "token is not gear")
+    assert(GF.IsToken(8) == true and GF.IsToken(4) == false and GF.IsToken(5) == false and GF.IsToken(1) == false)
+    assert(GF.IsToken(999) == nil)
+end)
+test("Gear filter: raid lists keep tier tokens, except on the Ula'tek encounter, and dungeons never do", function()
+    local data = {
+        raids = {
+            [1] = {instanceID = 5, [15] = {1, 4, 8}, byClass = {[15] = {[1] = {1, 8}}}, bySpec = {}, bonusByDiff = {}},
+            [2895] = {instanceID = 5, [15] = {1, 8}, byClass = {}, bySpec = {}, bonusByDiff = {}}
+        },
+        dungeons = {[10] = {all = {1, 8}, byEncounter = {}, byClass = {}, bySpec = {}}}
+    }
+    GF.Prune(data)
+    assert(table.concat(data.raids[1][15], ",") == "1,8", "token kept, mount removed")
+    assert(table.concat(data.raids[1].byClass[15][1], ",") == "1,8")
+    assert(table.concat(data.raids[2895][15], ",") == "1", "no token on Ula'tek")
+    assert(table.concat(data.dungeons[10].all, ",") == "1", "no tokens in dungeons")
 end)
 test("Gear filter: an item the client does not know is kept", function()
     assert(GF.IsGear(999) == nil)
@@ -45,10 +61,10 @@ test("Gear filter: pruning removes only non-gear from raid and dungeon lists", f
         dungeons = {[10] = {all = {1, 4}, byEncounter = {[7] = {5, 3}}, byClass = {[1] = {1, 6}}, bySpec = {[70] = {2, 8}}}}
     }
     local removed = GF.Prune(data)
-    assert(removed == 8, removed)
+    assert(removed == 7, removed) -- the raid token (8) stays; the dungeon one goes
     assert(table.concat(data.raids[1][15], ",") == "1,2")
     assert(table.concat(data.raids[1].byClass[15][1], ",") == "1")
-    assert(table.concat(data.raids[1].bySpec[15][70], ",") == "2")
+    assert(table.concat(data.raids[1].bySpec[15][70], ",") == "2,8")
     assert(data.raids[1].bonusByDiff[15] == "link" and data.raids[1].instanceID == 5)
     assert(table.concat(data.dungeons[10].all, ",") == "1")
     assert(table.concat(data.dungeons[10].byEncounter[7], ",") == "3")

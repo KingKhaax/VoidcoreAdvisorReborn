@@ -88,38 +88,48 @@ local function StripColorCodes(text)
     return (text:gsub("|c%x%x%x%x%x%x%x%x", ""):gsub("|r", ""))
 end
 
--- Reads tooltip data from C_TooltipInfo and collects item names from line 7+.
--- Each item line is prefixed with "- " which is stripped to get the bare name.
--- Returns a { [itemName] = true } set, or nil when the data is missing or thin.
+-- Every line of the tooltip, cleaned. Item names are looked for among these lines, so it does not
+-- matter at which line the list starts or which marker (a dash, a bullet) it uses.
+local function CleanLine(text)
+    local clean = StripColorCodes(text)
+    clean = clean:gsub("|T.-|t", "")
+    clean = clean:gsub("^%s+", "")
+    clean = clean:gsub("^%-%s*", "")
+    clean = clean:gsub("^\226\128\162%s*", "")
+    return (clean:gsub("%s+$", ""))
+end
+
+-- Reads tooltip data from C_TooltipInfo and returns the set of its cleaned lines.
+-- Returns a { [cleaned line] = true } set, or nil when the data is missing or thin.
 local function ParseVoidcacheTooltip(tooltipData, numLines)
     if numLines < MIN_LINES then
         return nil
     end
     local items = {}
-    for i, lineData in ipairs(tooltipData.lines) do
-        local text = lineData.leftText
-        if text then
-            -- Item entries start at line 7, each prefixed with "- "
-            if i >= 7 then
-                local clean = StripColorCodes(text)
-                if clean:sub(1, 2) == "- " then
-                    local itemName = clean:sub(3):match("^(.-)%s*$")
-                    if itemName and itemName ~= "" then
-                        items[itemName] = true
-                    end
-                end
+    for _, lineData in ipairs(tooltipData.lines) do
+        if lineData.leftText then
+            local clean = CleanLine(lineData.leftText)
+            if clean ~= "" then
+                items[clean] = true
             end
         end
     end
     return items
 end
 
+Scan.ParseTooltip = ParseVoidcacheTooltip -- exposed for the tests
+
 local function PoolStatus(parsed, nameCache)
     if parsed == nil then
         return "UNREADABLE"
     end
-    if next(nameCache) == nil or next(parsed) == nil then
+    if next(nameCache) == nil then
         return "OK"
+    end
+    -- A readable tooltip always lists something (a spec whose pool is finished starts a new cycle),
+    -- so an empty list means the lines were not understood: never offer the whole pool as obtained.
+    if next(parsed) == nil then
+        return "UNREADABLE"
     end
     for name in pairs(nameCache) do
         if parsed[name] then
