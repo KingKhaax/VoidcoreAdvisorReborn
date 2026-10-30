@@ -10,12 +10,18 @@ local VCA5 = {
     L = setmetatable({}, {__index = function(_, k) return k .. " %d" end})
 }
 local marked = {}
+local function key(ct, src, diff, spec, item)
+    return ct .. "|" .. src .. "|" .. diff .. "|" .. spec .. "|" .. item
+end
 VCA5.Data = {
-    IsObtained = function(ct, src, diff, spec, item) return marked[ct .. "|" .. src .. "|" .. diff .. "|" .. spec .. "|" .. item] == true end,
-    SetObtained = function(ct, src, diff, spec, item, v) marked[ct .. "|" .. src .. "|" .. diff .. "|" .. spec .. "|" .. item] = v end
+    IsObtained = function(ct, src, diff, spec, item) return marked[key(ct, src, diff, spec, item)] == true end,
+    SetObtained = function(ct, src, diff, spec, item, v) marked[key(ct, src, diff, spec, item)] = v end
 }
 local equipped = {[1] = 1, [2] = 500, [3] = 2}
-local popup
+local shown
+VCA5.ScanSelect = {Show = function(rows, header, onApply, onCancel)
+    shown = {rows = rows, header = header, onApply = onApply, onCancel = onCancel}
+end}
 _G.CreateFrame = function() return setmetatable({}, {__index = function() return function() end end}) end
 _G.DEFAULT_CHAT_FRAME = {AddMessage = function() end}
 _G.GetInventoryItemID = function(_, slot) return equipped[slot] end
@@ -25,29 +31,57 @@ _G.C_Item = {
     GetItemInfoInstant = function(id) return id, "", "", id == 500 and "INVTYPE_TRINKET" or "INVTYPE_HEAD" end,
     GetItemNameByID = function(id) return "Item" .. id end
 }
-_G.StaticPopupDialogs = {}
-_G.StaticPopup_Show = function(name, text) popup = {dialog = StaticPopupDialogs[name], text = text} end
-_G.ACCEPT, _G.CANCEL = "Accept", "Cancel"
+_G.EJ_GetInstanceInfo = function(id) return "Dungeon" .. id end
+_G.EJ_GetEncounterInfo = function(id) return "Boss" .. id end
+_G.GetSpecializationInfoByID = function(id) return id, "Spec" .. id end
 assert(loadfile("Core/VoidcacheScan.lua"))("addon", VCA5)
 local Scan = VCA5.VoidcacheScan
 
-test("Scan owned: lists the items to mark, skips trinkets and waits for confirmation", function()
-    popup = nil
-    local n = Scan.Owned()
-    assert(n == 3, n)
-    assert(popup and popup.text:find("Item1") and popup.text:find("Item2"))
-    assert(not popup.text:find("Item500"), "trinkets are skipped")
-    assert(next(marked) == nil, "nothing is saved before accepting")
+local function rowFor(itemID, source)
+    for _, r in ipairs(shown.rows) do
+        if r.itemID == itemID and r.source == source then
+            return r
+        end
+    end
+end
+
+test("Scan owned: nothing is marked until the player ticks it, and trinkets are not offered", function()
+    shown = nil
+    Scan.Owned()
+    assert(shown, "the selection window is shown")
+    assert(next(marked) == nil, "nothing is saved before the player chooses")
+    assert(rowFor(1, "Dungeon10") and rowFor(2, "Dungeon10") and rowFor(2, "Boss20"))
+    assert(rowFor(500, "Dungeon10") == nil, "trinkets are skipped")
+    assert(rowFor(3, "Boss20") == nil, "an item you do not have is not offered")
 end)
-test("Scan owned: accepting saves the marks for the loot spec only", function()
-    popup.dialog.OnAccept()
-    assert(marked["MYTHIC_PLUS|10|23|70|1"] and marked["MYTHIC_PLUS|10|23|70|2"] and marked["RAID|20|15|70|2"])
-    assert(marked["MYTHIC_PLUS|10|23|70|500"] == nil, "trinket is not marked")
-    assert(marked["RAID|20|15|70|3"] == nil, "an item you do not have is not marked")
+test("Scan owned: only the ticked rows are saved, for the loot spec only", function()
+    shown.onApply(rowFor(2, "Dungeon10").entries)
+    assert(marked[key("MYTHIC_PLUS", 10, 23, 70, 2)] == true)
+    assert(marked[key("MYTHIC_PLUS", 10, 23, 70, 1)] == nil, "unticked items stay unmarked")
+    assert(marked[key("RAID", 20, 15, 70, 2)] == nil, "another boss is a different row")
 end)
-test("Scan owned: cancelling saves nothing", function()
+test("Scan owned: items already marked are not offered again", function()
+    shown = nil
+    Scan.Owned()
+    assert(rowFor(2, "Dungeon10") == nil and rowFor(1, "Dungeon10"))
+end)
+test("Scan owned: choosing nothing saves nothing", function()
     for k in pairs(marked) do marked[k] = nil end
     Scan.Owned()
-    popup.dialog.OnCancel()
+    shown.onApply({})
+    assert(next(marked) == nil)
+end)
+test("Scan owned: closing the window saves nothing", function()
+    for k in pairs(marked) do marked[k] = nil end
+    Scan.Owned()
+    shown.onCancel()
+    assert(next(marked) == nil)
+end)
+test("Scan owned: if the window fails to open, nothing is saved", function()
+    for k in pairs(marked) do marked[k] = nil end
+    local real = VCA5.ScanSelect.Show
+    VCA5.ScanSelect.Show = function() error("boom") end
+    Scan.Owned()
+    VCA5.ScanSelect.Show = real
     assert(next(marked) == nil)
 end)

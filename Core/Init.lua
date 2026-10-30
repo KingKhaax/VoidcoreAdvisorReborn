@@ -33,6 +33,7 @@ local function GetGlobalDefaults()
         reminderTheme = "class",
         brcDefaultOnV2 = true,
         settingsTheme = "green",
+        scanTheme = "green",
         rollLayout = 1
     }
 end
@@ -89,6 +90,9 @@ local function InitDB()
         end
         if gdb.settingsTheme == nil or (gdb.settingsTheme ~= "current" and not VCA.IsTheme(gdb.settingsTheme)) then
             gdb.settingsTheme = "green"
+        end
+        if not VCA.IsTheme(gdb.scanTheme) then
+            gdb.scanTheme = "green"
         end
         if type(gdb.rollLayout) ~= "number" or gdb.rollLayout < 1 or gdb.rollLayout > 10 then
             gdb.rollLayout = 1
@@ -327,6 +331,9 @@ SlashCmdList["VOIDCOREADVISOR"] = function(msg)
     elseif cmd == "reminder" then
         -- Force-evaluate the reminder, ignoring the already-shown guard.
         VCA.Reminder.ForceEvaluate()
+
+    elseif cmd == "audit" then
+        VCA.LiveRaid.Audit()
 
     elseif cmd == "liveraid" then
         VCA.LiveRaid.Run(true)

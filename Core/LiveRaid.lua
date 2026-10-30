@@ -25,15 +25,61 @@ local function GetDB()
     return db.liveRaids
 end
 
+local function MergeList(into, from, newIDs)
+    local have = {}
+    for _, id in ipairs(into) do
+        have[id] = true
+    end
+    local added = 0
+    for _, id in ipairs(from) do
+        if not have[id] then
+            have[id] = true
+            into[#into + 1] = id
+            added = added + 1
+            if newIDs then
+                newIDs[id] = true
+            end
+        end
+    end
+    return added
+end
+
+function LiveRaid.MergeEncounter(existing, live, newIDs)
+    local added = 0
+    for diff, list in pairs(live) do
+        if type(diff) == "number" and type(list) == "table" then
+            existing[diff] = existing[diff] or {}
+            added = added + MergeList(existing[diff], list, newIDs)
+        end
+    end
+    for _, group in ipairs({"byClass", "bySpec"}) do
+        existing[group] = existing[group] or {}
+        for diff, perKey in pairs(live[group] or {}) do
+            existing[group][diff] = existing[group][diff] or {}
+            for key, list in pairs(perKey) do
+                existing[group][diff][key] = existing[group][diff][key] or {}
+                MergeList(existing[group][diff][key], list)
+            end
+        end
+    end
+    return added
+end
+
 local function Inject(entry)
     VCA.SeasonData = VCA.SeasonData or {}
     VCA.SeasonData.raids = VCA.SeasonData.raids or {}
     for encounterID, data in pairs(entry.raids) do
-        if not VCA.SeasonData.raids[encounterID] then
+        local existing = VCA.SeasonData.raids[encounterID]
+        if not existing then
             VCA.SeasonData.raids[encounterID] = data
+        elseif entry.merge then
+            LiveRaid.MergeEncounter(existing, data)
         end
     end
     VCA.LootPool.AddLiveRaid(entry.instanceID, entry.mapID)
+    if VCA.GearFilter then
+        VCA.GearFilter.Run()
+    end
     if VCA.TankTrinkets then
         VCA.TankTrinkets.Run()
     end
@@ -58,7 +104,8 @@ local function ReadLoot(classID, specID)
     for i = 1, EJ_GetNumLoot() do
         local info = C_EncounterJournal.GetLootInfoByIndex(i)
         local itemID = info and info.itemID
-        if itemID and itemID > 0 and not seen[itemID] then
+        if itemID and itemID > 0 and not seen[itemID] and not info.displayAsPerPlayerLoot
+            and not (VCA.GearFilter and VCA.GearFilter.IsGear(itemID) == false) then
             local quality = ItemQuality(itemID, info.link)
             if quality == nil then
                 return nil, nil, false
@@ -328,6 +375,91 @@ local function CheckOutdated()
 end
 
 LiveRaid.CheckOutdated = CheckOutdated
+
+local function SeasonRaidInstances()
+    local seen, list = {}, {}
+    for _, data in pairs(VCA.SeasonData and VCA.SeasonData.raids or {}) do
+        if data.instanceID and not seen[data.instanceID] then
+            seen[data.instanceID] = true
+            list[#list + 1] = data.instanceID
+        end
+    end
+    table.sort(list)
+    return list
+end
+
+local function AuditInstance(store, instanceID, entry, report)
+    local instanceAdded = 0
+    for encounterID, live in pairs(entry.raids) do
+        local existing = VCA.SeasonData.raids[encounterID]
+        if existing then
+            local newIDs = {}
+            local added = LiveRaid.MergeEncounter(existing, live, newIDs)
+            if added > 0 then
+                local names = {}
+                for itemID in pairs(newIDs) do
+                    names[#names + 1] = C_Item.GetItemNameByID(itemID) or tostring(itemID)
+                end
+                table.sort(names)
+                Say(true, string.format(L["AUDIT_BOSS"], EJ_GetEncounterInfo(encounterID) or tostring(encounterID),
+                    #names, table.concat(names, ", ")))
+                instanceAdded = instanceAdded + #names
+            end
+        end
+    end
+    if instanceAdded > 0 then
+        entry.merge = true
+        entry.build = select(2, GetBuildInfo())
+        store[instanceID] = entry
+    end
+    report.added = report.added + instanceAdded
+end
+
+function LiveRaid.Audit()
+    local store = GetDB()
+    if not store then
+        return
+    end
+    if InCombatLockdown() or IsInInstance() then
+        Say(true, L["LIVE_RAID_NO_ACCESS"])
+        return
+    end
+    if C_AddOns and C_AddOns.LoadAddOn then
+        C_AddOns.LoadAddOn("Blizzard_EncounterJournal")
+    end
+    if not EJ_GetNumTiers then
+        return
+    end
+    local instances = SeasonRaidInstances()
+    local report = {added = 0}
+    Say(true, L["AUDIT_START"])
+
+    local function Step(i, attempt)
+        local instanceID = instances[i]
+        if not instanceID then
+            if report.added > 0 then
+                Refresh()
+                Say(true, string.format(L["AUDIT_DONE"], #instances, report.added))
+            else
+                Say(true, L["AUDIT_NONE"])
+            end
+            return
+        end
+        local entry = ScanInstance(instanceID)
+        if entry then
+            AuditInstance(store, instanceID, entry, report)
+            Step(i + 1, 1)
+        elseif attempt < MAX_ATTEMPTS then
+            C_Timer.After(4, function()
+                Step(i, attempt + 1)
+            end)
+        else
+            Say(true, string.format(L["AUDIT_FAILED"], tostring(select(1, EJ_GetInstanceInfo(instanceID)) or instanceID)))
+            Step(i + 1, 1)
+        end
+    end
+    Step(1, 1)
+end
 
 -- /void liveraid: force a scan and report what happened.
 function LiveRaid.Run(verbose)

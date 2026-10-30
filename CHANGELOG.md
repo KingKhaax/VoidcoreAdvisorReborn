@@ -1,3 +1,20 @@
+Version: 2.11.3
+2026/10/30 Released
+
+🔮 New
+- [Scan] The Voidcache scan of dungeons and of raids, and `/void scan owned`, no longer mark anything by themselves. When they finish they open a window with every item they found (name, boss or dungeon and specializations), all unticked: you tick the ones you really got from a Voidcore roll and press the button. Closing the window changes nothing. Select all and Select none buttons are included.
+- [Scan] A scan only adds marks now. It no longer clears the marks you already had for that content (rolls the addon detected or items you marked by hand). The previous marks are still saved, so `/void restore` undoes the last scan.
+- [Scan] After marking, the chat tells you how to undo it: `/void restore` undoes the last scan, or you can unmark an item in Mark rolled item mode.
+- [Scan] The scan window has its own color, green by default, and a Color button in its header, next to the X, that opens a palette with every theme of the addon. The choice is saved.
+- [Loot data] New `/void audit`: it reads every raid boss of the season from the Encounter Journal, compares it with the addon's loot lists and adds any item that was missing, for every class and specialization. It never removes anything, tells you in the chat which boss lacked which items and keeps the result for the next sessions.
+
+🛠️ Fix
+- [Loot data] Only gear that gives item level is tracked now. Mounts, pets, tokens, shirts and cosmetic armor are removed from the loot lists of every raid boss and dungeon when the addon loads, and the reader of new raids skips them too. An item the game cannot identify yet is kept, so nothing real is dropped.
+- [Scan] The scan no longer offers the trinkets that the addon adds to the tank specializations (damage trinkets of the same main stat), which the game does not list in the Voidcache tooltip. They could be marked as obtained on characters that never rolled them. Reported on CurseForge.
+- [Scan] `/void scan owned` skips trinkets.
+
+---
+
 Version: 2.11.2
 2026/10/30 Released
 
