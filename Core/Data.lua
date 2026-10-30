@@ -264,6 +264,34 @@ function Data.RestoreKeys(keys)
     end
 end
 
+-- Older versions marked a roll for every specialization that could get the item, of every class. On a
+-- character, a mark for a specialization its own class does not have can never be real, so those are
+-- removed (kept in foreignSpecBackup). It only looks at this character's own data and class: another
+-- character of the same class has its own marks and is never touched from here.
+-- ownSpecs = { [specID] = true }. Returns how many marks were removed.
+function Data.PruneForeignSpecMarks(ownSpecs)
+    local db = _G[VCA.CHAR_DB_NAME]
+    if not (db and db.obtained and ownSpecs and next(ownSpecs)) then
+        return 0
+    end
+    local foreign = {}
+    for key in pairs(db.obtained) do
+        local specID = tonumber(key:match("^[^:]+:[^:]+:[^:]+:(%d+):%d+"))
+        if specID and specID ~= 0 and not ownSpecs[specID] then
+            foreign[#foreign + 1] = key
+        end
+    end
+    if #foreign == 0 then
+        return 0
+    end
+    db.foreignSpecBackup = db.foreignSpecBackup or {}
+    for _, key in ipairs(foreign) do
+        db.foreignSpecBackup[key] = true
+        db.obtained[key] = nil
+    end
+    return #foreign
+end
+
 -- Returns the total number of items marked as obtained across all sources.
 function Data.GetTotalObtainedCount()
     local db = _G[VCA.CHAR_DB_NAME]

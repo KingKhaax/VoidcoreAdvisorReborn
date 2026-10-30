@@ -301,6 +301,25 @@ if hooksecurefunc then
     end)
 end
 
+-- A finished cycle uses up the rolls that filled it. Without this, every login (and every roll) replays
+-- those old rolls: they are marked again, the pool is "complete" again, and the reset that follows wipes
+-- the marks the player made by hand or through a scan.
+local function FlagConsumedRolls(source, specID, isHighTier, pool)
+    local inPool = {}
+    for _, id in ipairs(pool) do
+        inPool[id] = true
+    end
+    for _, e in ipairs(VCA.Data.GetBonusRollLog()) do
+        if not e.manual and not e.unmarked and e.specID == specID and inPool[e.itemID] then
+            local diff = Detection.ResolveEntryDifficulty(e)
+            local tierOk = isHighTier == nil or (e.keyLevel ~= nil and (e.keyLevel >= 10) == isHighTier)
+            if diff == source.difficultyID and tierOk then
+                e.cycleDone = true
+            end
+        end
+    end
+end
+
 -- Checks whether every item in the spec-specific pool is now obtained for
 -- the given key tier.  If so, resets the obtained flags of THAT spec only on this
 -- source, so its cycle starts over while the other specs keep their progress.
@@ -337,6 +356,7 @@ local function CheckAndResetIfComplete(source, specID, isHighTier)
                          VCA.Data.SnapshotSource(source.sourceType, source.sourceID, source.difficultyID, specID,
             isHighTier)
     VCA.Data.ClearSourceForKeyTier(source.sourceType, source.sourceID, source.difficultyID, specID, isHighTier)
+    FlagConsumedRolls(source, specID, isHighTier, specPool)
     if snapshot then
         RememberReset(snapshot, source, specID)
     end
@@ -644,8 +664,8 @@ function Detection.ReplayBonusRollLog(verbose)
         -- A raid bonus roll has raidInstanceID+difficultyID but no sourceType/sourceID.
         -- Try the all-encounters path before treating the entry as incomplete.
         local linkDiff = Detection.RaidDifficultyFromLink(entry.itemLink)
-        if entry.unmarked then
-            -- The player cleared this item by hand: do not mark it again.
+        if entry.unmarked or entry.cycleDone then
+            -- The player cleared this item by hand, or the cycle it belonged to is finished: do not mark it again.
             skipped = skipped + 1
         elseif linkDiff and (entry.sourceType == VCA.ContentType.RAID or entry.raidInstanceID) and
             entry.difficultyID ~= linkDiff and entry.itemID and entry.specID then

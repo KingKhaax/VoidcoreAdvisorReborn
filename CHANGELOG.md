@@ -1,3 +1,12 @@
+Version: 2.11.5
+2026/10/31 Released
+
+🛠️ Fix
+- [Detection] Rolls from a cycle that was already finished (its marks were cleared on purpose) are no longer replayed at every login, so they stop being marked again and the chat stops repeating them.
+- [Data] Marks left by older versions for specializations your class does not have (an old bug marked a roll for every class) are removed on login, per character: each character only loses its own impossible marks, never another character's, even of the same class. They are kept as a backup and the chat says it once.
+
+---
+
 Version: 2.11.4
 2026/10/30 Released
 

@@ -73,6 +73,14 @@ test("Detection: finishing the pool of a spec resets only that spec", function()
     assert(not has(71, 5001, true) and not has(71, 5002, true), "spec 71 starts a new cycle")
     assert(has(72, 5001, true), "spec 72 keeps its progress")
 end)
+test("Detection: the rolls of a finished cycle are not replayed, so a replay never wipes marks again", function()
+    Data.SetObtained(M, DUNGEON, DIFF, 71, 5002, true, true) -- a mark made by hand after the reset
+    _G.print = function() end
+    D.ReplayBonusRollLog(false)
+    _G.print = realPrint
+    assert(has(71, 5002, true), "the hand mark survives the replay")
+    assert(not has(71, 5001, true), "the old roll is not marked again")
+end)
 test("Detection: a reset is remembered and the player can undo it from the chat link", function()
     assert(DetCharDB.lastReset and next(DetCharDB.lastReset.keys), "the cleared marks were kept")
     _G.print = function() end

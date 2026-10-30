@@ -91,3 +91,18 @@ test("Data: clearing a raid item flags its roll entries so the replay does not b
         log[i] = nil
     end
 end)
+
+test("Data: marks of specializations the character's class does not have are removed, per character", function()
+    _G.CharDB2 = {obtained = {}, selectedItems = {}, bonusRollLog = {}}
+    Data.SetObtained("RAID", 100, 15, 62, 7, true) -- a mage spec: the character's own
+    Data.SetObtained("RAID", 100, 15, 253, 7, true) -- a hunter spec: left by an old bug
+    Data.SetObtained("RAID", 100, 15, 0, 7, true) -- a manual mark keeps spec 0
+    Data.SetObtainedForKeyTier("MYTHIC_PLUS", 5, 23, 265, 9, true, true) -- tiered key of a foreign spec
+    local removed = Data.PruneForeignSpecMarks({[62] = true, [63] = true, [64] = true})
+    assert(removed == 2, removed)
+    assert(Data.IsObtained("RAID", 100, 15, 62, 7) and Data.IsObtained("RAID", 100, 15, 0, 7))
+    assert(not Data.IsObtained("RAID", 100, 15, 253, 7) and not Data.IsObtained("MYTHIC_PLUS", 5, 23, 265, 9))
+    assert(_G.CharDB2.foreignSpecBackup["RAID:100:15:253:7"], "kept as a backup")
+    assert(Data.PruneForeignSpecMarks({[62] = true}) == 0, "a second run removes nothing")
+    assert(Data.PruneForeignSpecMarks({}) == 0, "without knowing the specs, nothing is touched")
+end)

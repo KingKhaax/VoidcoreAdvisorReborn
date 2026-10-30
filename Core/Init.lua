@@ -202,6 +202,20 @@ initFrame:SetScript("OnEvent", function(self, event, ...)
             end
         end
 
+        -- Marks for specializations this character's class does not have came from an old bug.
+        do
+            local specs = {}
+            for _, spec in ipairs(VCA.SpecInfo.GetPlayerSpecs()) do
+                specs[spec.specID] = true
+            end
+            local removed = VCA.Data.PruneForeignSpecMarks(specs)
+            if removed > 0 then
+                C_Timer.After(12, function()
+                    print(VCA.Theme.title .. "VoidcoreAdvisor Reborn:|r " .. string.format(L["FOREIGN_PRUNED"], removed))
+                end)
+            end
+        end
+
         -- One-time hint for characters that have nothing marked yet.
         do
             local cdb = _G[VCA.CHAR_DB_NAME]
