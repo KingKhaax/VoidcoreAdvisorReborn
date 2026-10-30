@@ -1,6 +1,16 @@
 [
   {
     "date": "2026-10-30",
+    "version": "2.11.3",
+    "notes": [
+      "Nuevo: el escaneo y /void scan owned abren una ventana con los objetos encontrados, sin marcar, y solo se guardan los que elige el jugador.",
+      "Nuevo: la ventana tiene su propio color (verde por defecto) y un botón de Color con todos los temas.",
+      "Nuevo: /void audit comprueba cada jefe de banda con la Guía de aventuras y añade los objetos que falten.",
+      "Cambio: solo se siguen objetos que dan nivel de objeto; monturas, mascotas, fichas y cosméticos se quitan de las listas."
+    ]
+  },
+  {
+    "date": "2026-10-30",
     "version": "2.11.1",
     "notes": [
       "Mejorado: el objeto del mensaje de detección automática se puede pulsar y muestra el tooltip del objeto que tienes (bolsas, luego equipado) o el normal si ya no lo tienes."
