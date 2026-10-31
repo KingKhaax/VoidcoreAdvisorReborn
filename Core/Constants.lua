@@ -3,7 +3,7 @@
 local addonName, VCA = ...
 
 VCA.ADDON_NAME = addonName
-VCA.VERSION = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("VoidcoreAdvisorReborn", "Version")) or "2.11.5"
+VCA.VERSION = (C_AddOns and C_AddOns.GetAddOnMetadata and C_AddOns.GetAddOnMetadata("VoidcoreAdvisorReborn", "Version")) or "2.11.6"
 VCA.SCHEMA_VERSION = 2
 VCA.CHAR_DB_NAME = "VoidcoreAdvisorCharDB"
 VCA.GLOBAL_DB_NAME = "VoidcoreAdvisorDB"
@@ -50,6 +50,24 @@ VCA.MythicPlusEJDifficulty = VCA.Difficulty.DUNGEON_MYTHIC
 -- item level for Nebulous Voidcore rewards from M+ dungeons.
 VCA.MythicPlusBonusIDs = {13440, 6652, 12699} -- shared M+ base bonus IDs
 VCA.VoidcoreTrackBonusID = 12849 -- Myth 1/6 track
+
+-- ── Context of the Voidcache tooltip call ──────────────────────────────────────
+-- C_TooltipInfo.GetItemByID(id, nil, context[, keystoneLevel]) builds the tooltip the scan reads. The
+-- context tells the game which kind of loot it is: raid difficulty or Mythic+ (reported by xodiv on
+-- CurseForge; Heroic raid 95 and Mythic+ 190 are confirmed there, Normal 93 and Mythic 96 are not).
+-- The older numbers (6 for raids, 16 for dungeons) are kept as the fallback when the tooltip is empty.
+VCA.VoidcacheContext = {
+    raid = {[14] = 93, [15] = 95, [16] = 96},
+    raidFallback = 6,
+    mythicPlus = 190,
+    mythicPlusFallback = 16,
+    keystoneMin = 10 -- Mythic+ Voidcore rewards start at +10; a higher key of yours is used as it is
+}
+
+function VCA.VoidcacheKeystoneLevel()
+    local owned = C_MythicPlus and C_MythicPlus.GetOwnedKeystoneLevel and C_MythicPlus.GetOwnedKeystoneLevel()
+    return math.max(VCA.VoidcacheContext.keystoneMin, tonumber(owned) or 0)
+end
 
 -- ── Raid Voidcore tooltip settings per difficulty ───────────────────────────────
 -- ctx = item link context field (5=Hero tier, 6=Myth tier); drives the track label.

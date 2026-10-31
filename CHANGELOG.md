@@ -1,3 +1,14 @@
+Version: 2.11.6
+2026/10/31 Released
+
+💪 Improvement
+- [Characters] The list of your characters (/void chars) now shows the class icon of each character instead of the class name in brackets.
+
+🛠️ Fix
+- [Scan] The Voidcache scan now asks the game for the tooltip with the context of the content being scanned (Normal, Heroic and Mythic raid, and Mythic+) instead of one fixed number, as reported by xodiv on CurseForge. The Mythic+ tooltip also uses the level of your keystone when it is above +10 (10 otherwise). If the game gives no tooltip with the new context, it falls back to the old one.
+
+---
+
 Version: 2.11.5
 2026/10/31 Released
 

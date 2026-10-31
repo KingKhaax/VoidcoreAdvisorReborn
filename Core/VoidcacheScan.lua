@@ -430,7 +430,12 @@ ScanStep = function()
     end
 
     -- Read the Voidcache tooltip via C_TooltipInfo (pure data call, no frame needed).
-    local tooltipData = C_TooltipInfo.GetItemByID(dungeonEntry.voidcacheID, nil, 16, 10)
+    local ctx = VCA.VoidcacheContext
+    local keyLevel = VCA.VoidcacheKeystoneLevel()
+    local tooltipData = C_TooltipInfo.GetItemByID(dungeonEntry.voidcacheID, nil, ctx.mythicPlus, keyLevel)
+    if not (tooltipData and tooltipData.lines and #tooltipData.lines > 0) then
+        tooltipData = C_TooltipInfo.GetItemByID(dungeonEntry.voidcacheID, nil, ctx.mythicPlusFallback, 10)
+    end
     local numLines = (tooltipData and tooltipData.lines) and #tooltipData.lines or 0
     local parsed = ParseVoidcacheTooltip(tooltipData, numLines)
 
@@ -754,7 +759,12 @@ RaidScanStep = function()
         _raidState.specSwitchDone = false
     end
 
-    local tooltipData = C_TooltipInfo.GetItemByID(encounterEntry.voidcacheID, nil, 6)
+    local ctx = VCA.VoidcacheContext
+    local tooltipData = C_TooltipInfo.GetItemByID(encounterEntry.voidcacheID, nil,
+        ctx.raid[_raidState.difficultyID] or ctx.raidFallback)
+    if not (tooltipData and tooltipData.lines and #tooltipData.lines > 0) then
+        tooltipData = C_TooltipInfo.GetItemByID(encounterEntry.voidcacheID, nil, ctx.raidFallback)
+    end
     local numLines = (tooltipData and tooltipData.lines) and #tooltipData.lines or 0
     local parsed = ParseVoidcacheTooltip(tooltipData, numLines)
 

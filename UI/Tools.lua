@@ -190,7 +190,11 @@ function Tools.Chars()
         local c = gdb.characters[name]
         local heroic = c.raid and c.raid[15] or {}
         local mythic = c.raid and c.raid[16] or {}
-        lines[#lines + 1] = string.format(L["TOOLS_CHARS_LINE"], name, c.class or "?", c.cores or 0,
+        -- The class icon replaces the class name; if this client has no atlas for it, only the name shows.
+        local atlas = "classicon-" .. string.lower(c.class or "")
+        local icon = C_Texture and C_Texture.GetAtlasInfo and C_Texture.GetAtlasInfo(atlas) and
+                         (CreateAtlasMarkup(atlas, 16, 16) .. " ") or ""
+        lines[#lines + 1] = string.format(L["TOOLS_CHARS_LINE"], icon .. name, c.cores or 0,
             heroic.remaining or 0, heroic.chosen or 0, mythic.remaining or 0, mythic.chosen or 0,
             date("%Y/%m/%d", c.updated or 0))
     end

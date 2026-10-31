@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-10-31",
+    "version": "2.11.6",
+    "notes": [
+      "Mejorado: la lista de personajes muestra el icono de clase en lugar del nombre entre paréntesis.",
+      "Corregido: el escaneo del Alijo pide el tooltip con el contexto de cada contenido (raid Normal/Heroica/Mítica y M+), con el antiguo como respaldo."
+    ]
+  },
+  {
+    "date": "2026-10-31",
     "version": "2.11.5",
     "notes": [
       "Corregido: las tiradas de ciclos ya terminados ya no se vuelven a marcar en cada login.",
