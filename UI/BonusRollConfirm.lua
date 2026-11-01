@@ -1925,6 +1925,23 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
             for _, entry in pairs(prompts) do
                 if entry.spellID == spellID and entry.currencyID == VCA.VOIDCORE_CURRENCY_ID then
                     cachedPromptData = entry
+                    -- Remember by itself what the game says about this roll (context, difficulty, key
+                    -- level), one line per kind of content, so the real values can be checked later from
+                    -- the saved data without anyone typing a command.
+                    local gdb = _G[VCA.GLOBAL_DB_NAME]
+                    if gdb then
+                        gdb.promptLog = gdb.promptLog or {}
+                        local key = tostring(entry.itemContext) .. "/" .. tostring(entry.currentDifficulty) .. "/" ..
+                                        tostring(entry.treasureContextLevel)
+                        gdb.promptLog[key] = {
+                            itemContext = entry.itemContext,
+                            currentDifficulty = entry.currentDifficulty,
+                            treasureContextLevel = entry.treasureContextLevel,
+                            displayItemID = entry.displayItemID,
+                            time = time(),
+                            version = VCA.VERSION
+                        }
+                    end
                     break
                 end
             end

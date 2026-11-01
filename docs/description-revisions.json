@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-11-01",
+    "version": "2.11.7",
+    "notes": [
+      "Mejorado: si el contexto nuevo no da un tooltip legible, el escaneo prueba el antiguo solo.",
+      "Mejorado: el addon guarda solo los datos de cada aviso de tirada (contexto, dificultad, nivel de llave) para comprobar los contextos sin comandos."
+    ]
+  },
+  {
     "date": "2026-10-31",
     "version": "2.11.6",
     "notes": [

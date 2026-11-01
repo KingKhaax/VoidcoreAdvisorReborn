@@ -1,3 +1,12 @@
+Version: 2.11.7
+2026/11/01 Released
+
+💪 Improvement
+- [Scan] If the game gives no readable tooltip with the new context of a difficulty, the scan now tries the old one by itself, so a context that is wrong for Normal or Mythic never leaves the scan blind.
+- [Rolls] The addon now remembers by itself the data the game sends with each Voidcore roll prompt (context, difficulty, key level), one line per kind of content in its saved data, so the real contexts can be checked without anyone typing a command. Suggested by xodiv on CurseForge.
+
+---
+
 Version: 2.11.6
 2026/10/31 Released
 

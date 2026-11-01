@@ -119,6 +119,23 @@ end
 
 Scan.ParseTooltip = ParseVoidcacheTooltip -- exposed for the tests
 
+-- The Voidcache tooltip for the first context that gives a readable one. The newer contexts come first;
+-- if the game gives nothing (or something the parser cannot read) for them, the older one is tried, so a
+-- wrong guess for a difficulty never leaves the scan blind. contexts = { {ctx, keyLevel}, ... }.
+local function FetchCacheTooltip(itemID, contexts)
+    local tooltipData
+    for _, c in ipairs(contexts) do
+        local data = C_TooltipInfo.GetItemByID(itemID, nil, c[1], c[2])
+        if data and data.lines and #data.lines > 0 then
+            tooltipData = tooltipData or data
+            if ParseVoidcacheTooltip(data, #data.lines) then
+                return data
+            end
+        end
+    end
+    return tooltipData
+end
+
 local function PoolStatus(parsed, nameCache)
     if parsed == nil then
         return "UNREADABLE"
@@ -432,10 +449,8 @@ ScanStep = function()
     -- Read the Voidcache tooltip via C_TooltipInfo (pure data call, no frame needed).
     local ctx = VCA.VoidcacheContext
     local keyLevel = VCA.VoidcacheKeystoneLevel()
-    local tooltipData = C_TooltipInfo.GetItemByID(dungeonEntry.voidcacheID, nil, ctx.mythicPlus, keyLevel)
-    if not (tooltipData and tooltipData.lines and #tooltipData.lines > 0) then
-        tooltipData = C_TooltipInfo.GetItemByID(dungeonEntry.voidcacheID, nil, ctx.mythicPlusFallback, 10)
-    end
+    local tooltipData = FetchCacheTooltip(dungeonEntry.voidcacheID,
+        {{ctx.mythicPlus, keyLevel}, {ctx.mythicPlusFallback, 10}})
     local numLines = (tooltipData and tooltipData.lines) and #tooltipData.lines or 0
     local parsed = ParseVoidcacheTooltip(tooltipData, numLines)
 
@@ -760,11 +775,8 @@ RaidScanStep = function()
     end
 
     local ctx = VCA.VoidcacheContext
-    local tooltipData = C_TooltipInfo.GetItemByID(encounterEntry.voidcacheID, nil,
-        ctx.raid[_raidState.difficultyID] or ctx.raidFallback)
-    if not (tooltipData and tooltipData.lines and #tooltipData.lines > 0) then
-        tooltipData = C_TooltipInfo.GetItemByID(encounterEntry.voidcacheID, nil, ctx.raidFallback)
-    end
+    local tooltipData = FetchCacheTooltip(encounterEntry.voidcacheID,
+        {{ctx.raid[_raidState.difficultyID] or ctx.raidFallback}, {ctx.raidFallback}})
     local numLines = (tooltipData and tooltipData.lines) and #tooltipData.lines or 0
     local parsed = ParseVoidcacheTooltip(tooltipData, numLines)
 
