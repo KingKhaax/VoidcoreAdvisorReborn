@@ -1,3 +1,12 @@
+Version: 2.11.9
+2026/11/03 Released
+
+🛠️ Fix
+- [Rolls] Kith'ix (and any raid boss missing from the Voidcache table) is now recognized in the extra roll window: it shows the difficulty next to the boss name (Normal, Heroic or Mythic) and the odds and the list of remaining items per specialization, like the other bosses. If the game sends a context the addon does not know, it uses the difficulty of the raid you are in.
+- [Rolls] In the odds panel, the text under the percentage no longer runs into the wanted items; it wraps to a second line instead.
+
+---
+
 Version: 2.11.8
 2026/11/03 Released
 

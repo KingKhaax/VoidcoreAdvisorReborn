@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-11-03",
+    "version": "2.11.9",
+    "notes": [
+      "Corregido: Kith'ix (y cualquier jefe de raid que no esté en la tabla de cofres) se reconoce en la ventana de tirada extra, con su dificultad, probabilidad y lista de objetos por especialización.",
+      "Corregido: el texto bajo el porcentaje del panel de probabilidad ya no choca con los objetos elegidos."
+    ]
+  },
+  {
+    "date": "2026-11-03",
     "version": "2.11.8",
     "notes": [
       "Mejorado: el diseño de la ventana de tirada extra solo se guarda al pulsar el nuevo botón Guardar; elegirlo en la lista solo cambia la ventana de ejemplo.",

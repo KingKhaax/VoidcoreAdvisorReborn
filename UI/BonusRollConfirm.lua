@@ -140,8 +140,23 @@ local function NormalizeName(s)
     return s and (s:lower():gsub("[%p%s]", ""))
 end
 
-local function ResolveSourceFromBossName(promptData, title)
+-- Content type and difficulty of a roll prompt. A context the table does not know (the game can add new
+-- ones) falls back to the raid difficulty you are standing in, so a raid roll is never left unrecognized.
+local function RaidMapping(promptData)
     local mapping = promptData and ITEM_CONTEXT_TO_SOURCE[promptData.itemContext]
+    if mapping then
+        return mapping
+    end
+    if not (promptData and promptData.itemContext == 55) then
+        local _, instanceType, diffID = GetInstanceInfo()
+        if instanceType == "raid" and VCA.EligibleRaidDifficulties[diffID] then
+            return {contentType = VCA.ContentType.RAID, ejDiffID = diffID}
+        end
+    end
+end
+
+local function ResolveSourceFromBossName(promptData, title)
+    local mapping = RaidMapping(promptData)
     local boss = title and title:match("^[^:]+:%s*(.+)$")
     if not (mapping and mapping.contentType == VCA.ContentType.RAID and boss and EJ_GetEncounterInfo and
         VCA.SeasonData and VCA.SeasonData.raids) then
@@ -171,7 +186,7 @@ killFrame:SetScript("OnEvent", function(_, _, dungeonEncounterID, name, _, _, su
 end)
 
 local function ResolveSourceFromLastKill(promptData)
-    local mapping = promptData and ITEM_CONTEXT_TO_SOURCE[promptData.itemContext]
+    local mapping = RaidMapping(promptData)
     if not (lastKill and mapping and mapping.contentType == VCA.ContentType.RAID and VCA.SeasonData and
         VCA.SeasonData.raids) then
         return nil
@@ -1170,6 +1185,9 @@ local function LayoutDynamicSection(source, specID, y, geo)
     warnBody:SetWidth(math.min(320, panelW))
     oddsPct:SetText("")
     oddsCaption:SetText("")
+    -- Stay left of the wanted items: a long caption wraps to a second line instead of running under them.
+    oddsCaption:SetWidth(math.max(40, iconX - 12 - 6))
+    oddsCaption:SetJustifyH("LEFT")
     oddsMessage:SetText("")
     chosenText:SetText("")
     for i = 1, 5 do
