@@ -426,9 +426,8 @@ end
 local function ApplySourceSub(source)
     local text = SourceSubtitle(source)
     sourceSub = text
-    if text then
-        winItemSub:SetText(text)
-    end
+    -- Always rewrite it: a roll with no known source must not keep the line of the previous one.
+    winItemSub:SetText(text or "")
 end
 
 -- Timer bar  (value mirrored from BonusRollFrame.PromptFrame.Timer.Bar via OnUpdate)
@@ -1299,9 +1298,15 @@ end
 local LAYOUT_COUNT = 10
 BRC.LAYOUT_COUNT = LAYOUT_COUNT
 
+-- Layout being tried in the settings: only the sample uses it until the player presses Save.
+local trialLayout
+function BRC.SetTrialLayout(n)
+    trialLayout = n
+end
+
 local function GetLayoutID()
     local gdb = _G[VCA.GLOBAL_DB_NAME]
-    local n = gdb and tonumber(gdb.rollLayout) or 1
+    local n = (layoutPreview and trialLayout) or (gdb and tonumber(gdb.rollLayout)) or 1
     if n < 1 or n > LAYOUT_COUNT then
         n = 1
     end
@@ -1593,6 +1598,7 @@ function BRC.Show()
 
     local pf = BonusRollFrame.PromptFrame
 
+    layoutPreview = false -- a real roll always uses the saved layout
     cachedDisplayItemID = nil
     cachedItemLink = nil
     local ejBtn = pf.EncounterJournalLinkButton

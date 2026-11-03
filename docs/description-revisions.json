@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-11-03",
+    "version": "2.11.8",
+    "notes": [
+      "Mejorado: el diseño de la ventana de tirada extra solo se guarda al pulsar el nuevo botón Guardar; elegirlo en la lista solo cambia la ventana de ejemplo.",
+      "Corregido: una tirada de contenido no reconocido (por ejemplo una Cacería) ya no muestra la segunda línea de la tirada anterior."
+    ]
+  },
+  {
     "date": "2026-11-01",
     "version": "2.11.7",
     "notes": [

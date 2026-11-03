@@ -578,13 +578,16 @@ local function BuildPanes()
     Row(roll, L["OPTIONS_ROLL_LAYOUT"], L["OPTIONS_ROLL_LAYOUT_TIP"], function(row)
         local BRC = VCA.BonusRollConfirm
         local box = CreateFrame("Frame", nil, row)
-        box:SetSize(286 + 10 + 120, 24)
+        box:SetSize(244 + 8 + 100 + 8 + 80, 24)
+        -- Picking a layout only changes the sample; it is used by the real window once Save is pressed.
+        local pending
+        local save
         -- Like the theme selectors: arrows step one layout at a time, the middle button opens the list.
         local prev = Button(box, "<", 24, nil)
         prev:SetPoint("LEFT", box, "LEFT", 0, 0)
         local nxt = Button(box, ">", 24, nil)
-        nxt:SetPoint("LEFT", box, "LEFT", 262, 0)
-        local dd = Button(box, "", 240, nil)
+        nxt:SetPoint("LEFT", box, "LEFT", 220, 0)
+        local dd = Button(box, "", 196, nil)
         dd:SetPoint("TOPLEFT", prev, "TOPRIGHT", -1, 0)
         dd:SetPoint("BOTTOMRIGHT", nxt, "BOTTOMLEFT", 1, 0)
         local name = dd:CreateFontString(nil, "OVERLAY", "VCAFontNormal")
@@ -596,13 +599,20 @@ local function BuildPanes()
         caret:SetPoint("RIGHT", dd, "RIGHT", -7, 0)
         caret:SetText("v")
         function box.Update()
-            local id = BRC.GetLayoutID()
+            local id = pending or BRC.GetLayoutID()
             name:SetText("|cffffffff" .. id .. ". " .. L["ROLL_LAYOUT_" .. id] .. "|r")
+            if save then
+                save:SetShown(pending ~= nil and pending ~= BRC.GetLayoutID())
+            end
+        end
+        local function Pick(id)
+            pending = id
+            BRC.SetTrialLayout(id)
+            box.Update()
+            BRC.RefreshPreview() -- an open sample changes to the new layout right away
         end
         local function Step(delta)
-            GDB().rollLayout = (BRC.GetLayoutID() - 1 + delta) % BRC.LAYOUT_COUNT + 1
-            box.Update()
-            BRC.RefreshPreview()
+            Pick(((pending or BRC.GetLayoutID()) - 1 + delta) % BRC.LAYOUT_COUNT + 1)
         end
         prev:SetScript("OnClick", function()
             Step(-1)
@@ -615,17 +625,14 @@ local function BuildPanes()
             for id = 1, BRC.LAYOUT_COUNT do
                 entries[id] = {key = id, label = id .. ". " .. L["ROLL_LAYOUT_" .. id]}
             end
-            OpenChoiceList(dd, entries, BRC.GetLayoutID(), function(picked)
-                GDB().rollLayout = picked
-                box.Update()
-                BRC.RefreshPreview() -- an open sample changes to the new layout right away
-            end, 220)
+            OpenChoiceList(dd, entries, pending or BRC.GetLayoutID(), Pick, 220)
         end)
         -- Preview toggles the sample beside the settings; it never touches the saved position.
-        local preview = Button(box, L["OPTIONS_PREVIEW_REMINDER"], 120, function()
+        local preview = Button(box, L["OPTIONS_PREVIEW_REMINDER"], 100, function()
             if BRC.IsLayoutPreview() then
                 BRC.ClosePreview()
             else
+                BRC.SetTrialLayout(pending)
                 BRC.ShowPreview(true)
                 PlaceBeside("VCARollWindow")
                 if moveSave then
@@ -633,7 +640,16 @@ local function BuildPanes()
                 end
             end
         end)
-        preview:SetPoint("RIGHT", box, "RIGHT", 0, 0)
+        preview:SetPoint("LEFT", box, "LEFT", 244 + 8, 0)
+        save = Button(box, L["OPTIONS_ROLL_SAVE_BTN"], 80, function()
+            GDB().rollLayout = pending
+            pending = nil
+            BRC.SetTrialLayout(nil)
+            box.Update()
+            BRC.RefreshPreview()
+        end)
+        save:SetPoint("LEFT", preview, "RIGHT", 8, 0)
+        save:Hide()
         widgets[#widgets + 1] = box
         return box
     end, true)

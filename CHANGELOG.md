@@ -1,3 +1,14 @@
+Version: 2.11.8
+2026/11/03 Released
+
+💪 Improvement
+- [Rolls] The window layout of the extra roll window is now only saved when you press the new Save button next to Preview. Picking a layout in the list or with the arrows just changes the sample, so you can try them all without changing the real window.
+
+🛠️ Fix
+- [Rolls] A roll whose content the addon does not recognize (for example a Hunt) no longer shows the second line of the previous roll (such as "Mythic +10"); the line stays empty instead.
+
+---
+
 Version: 2.11.7
 2026/11/01 Released
 
