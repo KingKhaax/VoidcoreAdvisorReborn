@@ -1,3 +1,17 @@
+Version: 2.11.10
+2026/11/04 Released
+
+🔮 New
+- [Raid] The "Select by slot" grid of the raid overview has a new last button, "Tier tokens": it lists every tier token of the raid, and ticking one selects it on every boss that drops it. Suggested by tryp on CurseForge.
+
+💪 Improvement
+- [Raid] In the lists of that grid, each item now shows in brackets the boss (or bosses) of the raid that drops it.
+
+🛠️ Fix
+- [Loot list] An item you already have now reads as owned whichever specialization is selected. Before, selecting a specialization only looked at that specialization, so an item won with another one showed as obtainable again. The per-specialization counters and odds are unchanged.
+
+---
+
 Version: 2.11.9
 2026/11/03 Released
 

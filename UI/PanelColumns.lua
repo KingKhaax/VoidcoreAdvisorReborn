@@ -186,21 +186,15 @@ local function PopulateItemColumn(sourceType, sourceID, difficultyID, isHighTier
     local colW = _s.LeftColWidth()
     local rowTop = 0
     for _, item in ipairs(displayItems) do
-        -- An item is considered obtained when it has been won by at least one
-        -- of the relevant specs.  When a spec filter is active, only check the
-        -- selected spec(s) so that items looted on a different spec appear
-        -- lootable again.  With no filter, fall back to the full spec union.
-        -- Probability rows track per-spec state independently; this just drives
-        -- the visual dim in the item list.
+        -- An item is considered obtained when it has been won on any of the specs, whichever spec is
+        -- selected: if you own it, it reads as owned. Probability rows track per-spec state
+        -- independently; this just drives the visual dim in the item list.
         local obtained = false
-        local specsToCheck = next(_s.selectedSpecIDs) and _s.selectedSpecIDs or nil
         for _, spec in ipairs(specs) do
-            if not specsToCheck or specsToCheck[spec.specID] then
-                if VCA.Data.IsObtainedForKeyTier(sourceType, sourceID, difficultyID, spec.specID, item.itemID,
-                    isHighTier) then
-                    obtained = true
-                    break
-                end
+            if VCA.Data.IsObtainedForKeyTier(sourceType, sourceID, difficultyID, spec.specID, item.itemID,
+                isHighTier) then
+                obtained = true
+                break
             end
         end
         -- Amber state: obtained only under specID=0 (migrated from pre-spec data).

@@ -17,11 +17,11 @@ local SLOT_BTN_GAP = 6
 local SLOT_ROWS_GAP = 6
 local TITLE_H = 22
 local SECTION_H = 8 + TITLE_H + 6 + SLOT_BTN_SIZE + SLOT_ROWS_GAP + SLOT_BTN_SIZE + 10
-local BTNS_PER_ROW = 7
+local BTNS_PER_ROW = 8
 Overview.SLOT_SECTION_H = SECTION_H
 
 local SLOT_ORDER = {"head", "neck", "shoulder", "back", "chest", "wrist", "hands", "waist", "legs", "feet", "finger",
-                    "trinket", "weapon", "offhand"}
+                    "trinket", "weapon", "offhand", "tokens"}
 local WEAPON_SUBSLOTS = {"1h", "2h", "ranged"}
 local SLOT_INV_NAME = {
     head = "HEADSLOT",
@@ -83,7 +83,8 @@ local function SlotOf(itemID)
         if equipLoc == nil then
             return nil
         end
-        v = SLOT_TOKEN_MAP[equipLoc] or false
+        -- Raid tier tokens have no equip slot: they get a group of their own.
+        v = SLOT_TOKEN_MAP[equipLoc] or (VCA.GearFilter.IsToken(itemID) and "tokens") or false
         slotCache[itemID] = v
     end
     return v or nil
@@ -238,7 +239,7 @@ Overview.RefreshSlots = RefreshSlotButtons
 
 -- ── Item picker ───────────────────────────────────────────────────────────────
 
-local PICKER_W, ROW_H, PAD = 320, 22, 10
+local PICKER_W, ROW_H, PAD = 400, 22, 10
 
 local catcher = CreateFrame("Frame", nil, UIParent)
 catcher:SetAllPoints(UIParent)
@@ -292,6 +293,15 @@ scroll:SetScript("OnMouseWheel", function(self, delta)
     local maxScroll = math.max(0, child:GetHeight() - self:GetHeight())
     self:SetVerticalScroll(math.max(0, math.min(maxScroll, self:GetVerticalScroll() - delta * ROW_H * 3)))
 end)
+
+-- " (Boss, Boss)": the bosses of this raid that drop the item.
+local function BossSuffix(bossList)
+    local names = {}
+    for _, encounterID in ipairs(bossList) do
+        names[#names + 1] = EJ_GetEncounterInfo(encounterID)
+    end
+    return #names > 0 and (" |cff9d9d9d(" .. table.concat(names, ", ") .. ")|r") or ""
+end
 
 local rows = {}
 local function GetRow(i)
@@ -367,7 +377,7 @@ local function FillPicker(slotKey)
         r.label:SetPoint("LEFT", r.icon, "RIGHT", 5, 0)
         r.label:SetPoint("RIGHT", r.frame, "RIGHT", -4, 0)
         if name then
-            r.label:SetText("|cnIQ" .. (quality or 1) .. ":" .. name .. "|r")
+            r.label:SetText("|cnIQ" .. (quality or 1) .. ":" .. name .. "|r" .. BossSuffix(bosses[itemID]))
         else
             if C_Item.RequestLoadItemDataByID then
                 C_Item.RequestLoadItemDataByID(itemID)
@@ -421,9 +431,10 @@ local gridTopY = -(8 + TITLE_H + 6)
 for i, slotKey in ipairs(SLOT_ORDER) do
     local col = (i - 1) % BTNS_PER_ROW
     local row = math.floor((i - 1) / BTNS_PER_ROW)
+    local inRow = math.min(BTNS_PER_ROW, #SLOT_ORDER - row * BTNS_PER_ROW) -- each row is centered
     local btn = CreateFrame("Frame", nil, section)
     btn:SetSize(SLOT_BTN_SIZE, SLOT_BTN_SIZE)
-    btn:SetPoint("TOP", section, "TOP", (col - (BTNS_PER_ROW - 1) / 2) * (SLOT_BTN_SIZE + SLOT_BTN_GAP),
+    btn:SetPoint("TOP", section, "TOP", (col - (inRow - 1) / 2) * (SLOT_BTN_SIZE + SLOT_BTN_GAP),
         gridTopY - row * (SLOT_BTN_SIZE + SLOT_ROWS_GAP))
     btn:EnableMouse(true)
 
@@ -440,6 +451,9 @@ for i, slotKey in ipairs(SLOT_ORDER) do
         if textureName then
             icon:SetTexture(textureName)
         end
+    end
+    if slotKey == "tokens" then
+        icon:SetTexture("Interface/Icons/INV_Misc_Coin_01")
     end
     icon:SetVertexColor(0.9, 0.9, 0.9, 1)
 

@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-11-04",
+    "version": "2.11.10",
+    "notes": [
+      "Nuevo: el resumen de la raid tiene una casilla «Tokens de tier» para elegir los tokens de tier de todos los jefes a la vez.",
+      "Mejorado: en las listas de «Seleccionar por casilla» de la raid, cada objeto indica entre paréntesis qué jefe lo suelta.",
+      "Corregido: un objeto que ya tienes sale como conseguido sea cual sea la especialización fijada."
+    ]
+  },
+  {
     "date": "2026-11-03",
     "version": "2.11.9",
     "notes": [
